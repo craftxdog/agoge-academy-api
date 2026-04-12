@@ -1,0 +1,102 @@
+### 🏛️ Agoge Academy API - HTTP Requests
+
+@baseUrl = http://localhost:3000/api/v1
+@contentType = application/json
+
+################################################
+
+# 🔐 AUTH
+
+################################################
+
+### Register user
+
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+"email": "[john.doe@example.com](mailto:john.doe@example.com)",
+"password": "password123",
+"username": "johndoe",
+"firstName": "John",
+"lastName": "Doe"
+}
+
+### Login
+
+# @name login
+
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+"username": "johndoe",
+"password": "password123"
+}
+
+### Save token
+
+@accessToken = {{login.response.body.data.accessToken}}
+
+################################################
+
+# 👤 USERS
+
+################################################
+
+### Get current user
+
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{accessToken}}
+
+### Get users (paginated)
+
+GET {{baseUrl}}/users?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+################################################
+
+# 📦 STORAGE
+
+################################################
+
+### Upload file
+
+POST {{baseUrl}}/storage/upload
+Authorization: Bearer {{accessToken}}
+Content-Type: multipart/form-data
+
+< ./test-file.jpg
+
+################################################
+
+# ❌ ERROR CASES (VALIDATION TESTING)
+
+################################################
+
+### Invalid login
+
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+"username": "johndoe",
+"password": "wrongpassword"
+}
+
+### Missing token
+
+GET {{baseUrl}}/users/me
+
+### Invalid email
+
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+"email": "invalid-email",
+"password": "password123",
+"username": "test",
+"firstName": "Test",
+"lastName": "User"
+}

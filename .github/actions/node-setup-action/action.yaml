@@ -1,0 +1,60 @@
+name: Agoge Academy API Node Setup
+description: Sets up Node.js, Yarn cache, and project dependencies for Agoge Academy API workflows.
+
+inputs:
+  node-version:
+    description: Node.js version used by the workflow.
+    required: false
+    default: '22'
+  yarn-version:
+    description: Yarn Classic version used by the workflow.
+    required: false
+    default: '1.22.22'
+  install-command:
+    description: Dependency installation command.
+    required: false
+    default: yarn install --frozen-lockfile --non-interactive --ignore-scripts
+  install-dependencies:
+    description: Whether dependencies should be installed.
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Enable Yarn
+      shell: bash
+      run: |
+        corepack enable
+        corepack prepare "yarn@${{ inputs.yarn-version }}" --activate
+
+    - name: Validate Yarn lockfile
+      shell: bash
+      run: |
+        if [ ! -f yarn.lock ]; then
+          echo "Expected yarn.lock because Agoge Academy API uses Yarn."
+          exit 1
+        fi
+
+    - name: Resolve Yarn cache directory
+      id: yarn-cache
+      shell: bash
+      run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Yarn cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.yarn-cache.outputs.dir }}
+        key: ${{ runner.os }}-node-${{ inputs.node-version }}-yarn-${{ inputs.yarn-version }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ inputs.node-version }}-yarn-${{ inputs.yarn-version }}-
+
+    - name: Install dependencies
+      if: ${{ inputs.install-dependencies == 'true' }}
+      shell: bash
+      run: ${{ inputs.install-command }}

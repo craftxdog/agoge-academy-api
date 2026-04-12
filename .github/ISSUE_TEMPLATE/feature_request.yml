@@ -1,0 +1,271 @@
+name: Agoge API Feature Request
+description: Propón una mejora para el backend, arquitectura o contrato HTTP de Agoge API.
+title: '[Agoge API Feature]: '
+labels: ['enhancement', 'api', 'backend']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por proponer una mejora para Agoge API.
+
+        Este formulario está diseñado para features de backend y API. La idea es que la propuesta llegue con suficiente contexto técnico para evaluar arquitectura, impacto, seguridad, contrato HTTP, datos y testing antes de implementarla.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema o necesidad
+      description: Explica qué problema resuelve esta feature y por qué importa para Agoge API.
+      placeholder: 'Ej: Los clientes no pueden consultar el historial de sesiones activas de un usuario desde la API.'
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objetivo esperado
+      description: Describe el resultado concreto que debería lograr esta feature.
+      placeholder: 'Ej: Permitir consultar, filtrar y revocar sesiones activas por usuario desde endpoints protegidos.'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend_area
+    attributes:
+      label: Área backend afectada
+      description: Selecciona el módulo o capa principal de Agoge API que cambiaría.
+      options:
+        - Auth
+        - Users
+        - Storage
+        - Analytics
+        - Database/ORM
+        - Config/Environment
+        - Validation/Pipes
+        - Guards/Authz
+        - Interceptors/Middleware
+        - Observability/Logging
+        - Testing/QA
+        - Documentation
+        - New module
+        - Unknown/Needs design
+    validations:
+      required: true
+
+  - type: textarea
+    id: architecture_fit
+    attributes:
+      label: Encaje con la arquitectura
+      description: Explica dónde viviría esta feature y cómo se conecta con módulos, servicios, controladores, guards, pipes, DTOs o providers existentes.
+      placeholder: |
+        Ej:
+        - Controller: SessionsController
+        - Service: SessionsService
+        - Guards: JwtAuthGuard + roles
+        - DTOs: ListSessionsQueryDto, RevokeSessionDto
+        - Data layer: Prisma model Session
+        - Eventos/logs: registrar revocación de sesión
+    validations:
+      required: true
+
+  - type: dropdown
+    id: api_change_type
+    attributes:
+      label: Tipo de cambio en la API
+      description: Indica cómo cambia el contrato público o interno.
+      options:
+        - Nuevo endpoint
+        - Cambio en endpoint existente
+        - Nuevo campo en request/response
+        - Cambio de validación
+        - Cambio de autenticación/autorización
+        - Cambio interno sin contrato HTTP
+        - Deprecación o breaking change
+        - No estoy seguro
+    validations:
+      required: true
+
+  - type: textarea
+    id: api_contract
+    attributes:
+      label: Contrato API propuesto
+      description: Describe endpoints, métodos, path/query params, headers, request body, response body y status codes esperados.
+      render: markdown
+      placeholder: |
+        Ej:
+        `GET /api/v1/users/:userId/sessions`
+
+        Query params:
+        - `status`: active | revoked
+        - `limit`: number
+
+        Response 200:
+        ```json
+        {
+          "items": [
+            {
+              "id": "session_id",
+              "createdAt": "2026-04-12T10:00:00.000Z",
+              "lastUsedAt": "2026-04-12T11:00:00.000Z"
+            }
+          ]
+        }
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: auth_security
+    attributes:
+      label: Autenticación, autorización y seguridad
+      description: Define quién puede usar esta feature, qué permisos requiere y qué riesgos de seguridad hay que cuidar.
+      placeholder: |
+        Ej:
+        - Requiere JWT
+        - Solo el propio usuario o admin puede consultar sesiones
+        - Redactar tokens en logs
+        - Evitar exponer IP/device completo si es sensible
+    validations:
+      required: true
+
+  - type: textarea
+    id: data_model
+    attributes:
+      label: Impacto en datos/base de datos
+      description: Indica si requiere tablas, campos, índices, migraciones, seeds, constraints o cambios de Prisma/ORM.
+      placeholder: |
+        Ej:
+        - Nuevo modelo `Session`
+        - Índice por `userId` y `status`
+        - Migración requerida
+        - Backfill no requerido
+    validations:
+      required: true
+
+  - type: textarea
+    id: business_impact
+    attributes:
+      label: Impacto funcional
+      description: Explica a quién beneficia, qué flujo desbloquea y qué pasa si no se implementa.
+      placeholder: |
+        Ej:
+        - Beneficia a usuarios y admins
+        - Desbloquea gestión de sesiones desde el dashboard
+        - Sin esto, soporte debe revocar sesiones manualmente
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridad sugerida
+      description: Selecciona la urgencia funcional/técnica.
+      options:
+        - P0 - Bloquea operación o seguridad
+        - P1 - Alto impacto, necesario pronto
+        - P2 - Importante, no bloqueante
+        - P3 - Mejora útil
+        - P4 - Nice to have
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibilidad y breaking changes
+      description: Indica si rompe clientes existentes, requiere versión nueva de API, migración o deprecación.
+      placeholder: |
+        Ej:
+        - No rompe contrato existente
+        - Agrega endpoint nuevo bajo `/api/v1`
+        - No requiere deprecación
+        - Clientes antiguos no se ven afectados
+    validations:
+      required: true
+
+  - type: textarea
+    id: operational_impact
+    attributes:
+      label: Impacto operativo
+      description: Describe efectos en performance, rate limits, logs, métricas, tracing, colas, jobs, cache o despliegue.
+      placeholder: |
+        Ej:
+        - Puede requerir paginación para evitar queries pesadas
+        - Agregar métrica `sessions_revoked_total`
+        - Registrar audit log al revocar sesiones
+        - No requiere job ni cola
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Criterios de aceptación
+      description: Lista condiciones verificables para considerar terminada la feature.
+      placeholder: |
+        - `GET /api/v1/users/:id/sessions` devuelve sesiones paginadas
+        - Usuarios sin permisos reciben 403
+        - Request inválida recibe 400 con errores de validación claros
+        - Se agregan tests unitarios/e2e para casos felices y errores
+        - La documentación/API examples quedan actualizados
+    validations:
+      required: true
+
+  - type: textarea
+    id: test_plan
+    attributes:
+      label: Plan de pruebas esperado
+      description: Indica qué tests o verificaciones deberían cubrir esta feature.
+      placeholder: |
+        Ej:
+        - Unit tests para service
+        - E2E para endpoint con JWT válido, JWT inválido y rol insuficiente
+        - Validación de DTO/query params
+        - Test de migración/seed si aplica
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Describe opciones descartadas y por qué no son ideales.
+      placeholder: |
+        Ej:
+        - Resolverlo desde admin interno sin endpoint público
+        - Exponer solo revocación sin listado
+        - Usar logs existentes en vez de tabla dedicada
+
+  - type: textarea
+    id: rollout
+    attributes:
+      label: Rollout y monitoreo
+      description: Explica cómo debería desplegarse, monitorearse o revertirse esta feature.
+      placeholder: |
+        Ej:
+        - Detrás de feature flag: no
+        - Monitorear 4xx/5xx del endpoint
+        - Reversible eliminando el endpoint sin migración destructiva
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist antes de enviar
+      description: Confirma que la propuesta tiene suficiente información para evaluación técnica.
+      options:
+        - label: Expliqué el problema y el objetivo concreto.
+          required: true
+        - label: Conecté la feature con módulos/capas de Agoge API.
+          required: true
+        - label: Definí el contrato API o indiqué que no cambia el contrato HTTP.
+          required: true
+        - label: Pensé el impacto en autenticación, autorización y seguridad.
+          required: true
+        - label: Pensé el impacto en datos, compatibilidad, operación y pruebas.
+          required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Contexto adicional
+      description: Agrega referencias, ejemplos, decisiones previas o notas útiles.
+      placeholder: 'Ej: relacionado con #123, requerido por dashboard, depende de nueva tabla, etc.'

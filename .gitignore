@@ -1,0 +1,88 @@
+# 📦 Dependencies
+
+/node_modules
+
+# 🏗️ Build output
+
+/dist
+/build
+
+# 🧪 Test coverage
+
+/coverage
+/.nyc_output
+
+# 🧾 Logs
+
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 💻 OS files
+
+.DS_Store
+Thumbs.db
+
+# 🧠 IDE / Editor
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.idea
+*.sublime-workspace
+.project
+.classpath
+.c9/
+.settings/
+
+# 🔐 Environment variables
+
+.env
+.env.*
+!.env.example
+
+# ⚙️ Runtime
+
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 🧪 Temporary files
+
+.temp
+.tmp
+
+# 🐳 Docker
+
+docker-compose.override.yml
+
+# 🗄️ Database
+
+prisma/dev.db
+prisma/dev.db-journal
+
+# 📂 Uploads (local storage)
+
+uploads/
+public/uploads/
+
+# 📊 Prisma generated files
+
+/generated
+
+# 📄 Diagnostic reports
+
+report.*.json
+
+# 🧬 Cache
+
+.cache
+.next

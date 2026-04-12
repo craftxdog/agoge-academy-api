@@ -1,0 +1,281 @@
+name: Agoge API Bug Report
+description: Reporta un bug reproducible en el backend o en un endpoint de Agoge API.
+title: '[Agoge API Bug]: '
+labels: ['bug', 'api', 'backend']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar un problema en Agoge API.
+
+        Este formulario está orientado a bugs de backend y endpoints HTTP. Incluye datos suficientes para reproducir, identificar el contrato afectado y depurar sin pedir información básica después.
+
+        Antes de enviar:
+        - No pegues tokens, contraseñas, cookies ni secretos reales.
+        - Redacta cualquier dato sensible en headers, payloads y logs.
+        - Usa ejemplos mínimos que reproduzcan el fallo.
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint afectado
+      description: Ruta exacta del endpoint de Agoge API que falla.
+      placeholder: 'Ej: /api/v1/auth/login'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend_area
+    attributes:
+      label: Área backend afectada
+      description: Módulo o capa de Agoge API donde parece ocurrir el bug.
+      options:
+        - Auth
+        - Users
+        - Storage
+        - Analytics
+        - Database/ORM
+        - Config/Environment
+        - Validation/Pipes
+        - Guards/Authz
+        - Interceptors/Middleware
+        - Unknown/Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: method
+    attributes:
+      label: Método HTTP
+      description: Método usado al reproducir el bug.
+      options:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - HEAD
+        - OPTIONS
+    validations:
+      required: true
+
+  - type: input
+    id: api_version
+    attributes:
+      label: Versión/base URL de la API
+      description: Indica la versión, prefijo o ambiente donde ocurre.
+      placeholder: 'Ej: v1, /api/v1, http://localhost:3000, staging'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: auth_required
+    attributes:
+      label: ¿Requiere autenticación?
+      description: Marca si el endpoint necesita credenciales para reproducir el problema.
+      options:
+        - Sí, requiere token JWT
+        - Sí, requiere API key
+        - Sí, requiere cookie/sesión
+        - No requiere autenticación
+        - No estoy seguro
+    validations:
+      required: true
+
+  - type: textarea
+    id: auth_context
+    attributes:
+      label: Contexto de autenticación/autorización
+      description: Describe rol, permisos, tenant, usuario de prueba o headers relevantes. No pegues secretos reales.
+      placeholder: |
+        Ej:
+        - Rol: admin
+        - Usuario de prueba: test-admin@example.com
+        - Header usado: Authorization: Bearer <redacted>
+        - Permisos esperados: users:read
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumen del bug
+      description: Explica claramente qué está fallando en Agoge API.
+      placeholder: 'Ej: POST /api/v1/auth/login devuelve 500 cuando el email existe pero la contraseña es inválida.'
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      description: Pasos exactos para provocar el fallo desde cero.
+      placeholder: |
+        1. Levantar Agoge API con `yarn start:dev`
+        2. Crear/usar el usuario `...`
+        3. Ejecutar la request indicada abajo
+        4. Observar el status/body/error
+    validations:
+      required: true
+
+  - type: textarea
+    id: request
+    attributes:
+      label: Request mínima que reproduce el bug
+      description: Pega un curl, HTTPie, request de Postman o fragmento de api.http. Incluye headers, path params, query params y body relevantes. Redacta credenciales.
+      render: shell
+      placeholder: |
+        curl -X POST 'http://localhost:3000/api/v1/auth/login' \
+          -H 'Content-Type: application/json' \
+          -H 'Authorization: Bearer <redacted>' \
+          -d '{
+            "email": "user@example.com",
+            "password": "<redacted>"
+          }'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Respuesta esperada
+      description: Status code, body, headers o comportamiento esperado del endpoint.
+      placeholder: |
+        Status: 401
+        Body:
+        {
+          "statusCode": 401,
+          "message": "Invalid credentials"
+        }
+    validations:
+      required: true
+
+  - type: input
+    id: actual_status_code
+    attributes:
+      label: Status code actual
+      description: Código HTTP devuelto por Agoge API.
+      placeholder: 'Ej: 500'
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Respuesta actual
+      description: Status code, body, headers o comportamiento real observado.
+      placeholder: |
+        Status: 500
+        Body:
+        {
+          "statusCode": 500,
+          "message": "Internal server error"
+        }
+    validations:
+      required: true
+
+  - type: textarea
+    id: observability
+    attributes:
+      label: Datos de observabilidad
+      description: Incluye timestamp, request id, correlation id, trace id o span id si existen.
+      placeholder: |
+        - Timestamp:
+        - Request ID:
+        - Correlation ID:
+        - Trace ID:
+        - Service instance/container:
+
+  - type: textarea
+    id: backend_logs
+    attributes:
+      label: Logs del backend
+      description: Pega stack traces, logs de NestJS, errores de base de datos o trazas relevantes. Redacta secretos.
+      render: shell
+      placeholder: |
+        [Nest] 12345  ERROR [ExceptionsHandler] ...
+        Error: ...
+            at ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regression
+    attributes:
+      label: ¿Es una regresión?
+      description: Indica si antes funcionaba y desde cuándo falla.
+      options:
+        - Sí, antes funcionaba
+        - No, nunca funcionó
+        - No estoy seguro
+    validations:
+      required: true
+
+  - type: input
+    id: last_known_good
+    attributes:
+      label: Última versión/commit donde funcionaba
+      description: Si aplica, indica tag, versión, commit o fecha aproximada.
+      placeholder: 'Ej: v0.3.1, commit abc1234, o 2026-04-10'
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Entorno backend
+      description: Datos del entorno donde se reproduce el bug.
+      value: |
+        - Agoge API version/commit:
+        - Environment: local / dev / staging / production
+        - Node.js version:
+        - Yarn/npm version:
+        - NestJS version:
+        - Database engine/version:
+        - OS:
+        - Docker: yes/no
+    validations:
+      required: true
+
+  - type: textarea
+    id: database_context
+    attributes:
+      label: Contexto de base de datos
+      description: Incluye datos mínimos, migraciones, seed o estado necesario para reproducir. No pegues datos sensibles.
+      placeholder: |
+        Ej:
+        - Migraciones aplicadas: sí
+        - Seed usado: default seed
+        - Tabla/entidad afectada: users
+        - Registro mínimo necesario: usuario con email user@example.com
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impacto
+      description: Explica a quién afecta y qué operación bloquea.
+      placeholder: 'Ej: Bloquea login de usuarios existentes en staging.'
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist antes de enviar
+      description: Confirma que el reporte tiene la información crítica para depurar Agoge API.
+      options:
+        - label: Confirmé que el endpoint, método HTTP y versión/base URL están indicados.
+          required: true
+        - label: Incluí una request mínima reproducible.
+          required: true
+        - label: Incluí respuesta esperada y respuesta actual.
+          required: true
+        - label: Incluí contexto de autenticación/autorización o indiqué que no aplica.
+          required: true
+        - label: Redacté tokens, contraseñas, cookies, API keys y datos sensibles.
+          required: true
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Contexto adicional
+      description: Agrega cualquier detalle útil que no encaje arriba.
+      placeholder: 'Ej: ocurre solo con payloads grandes, solo en staging, solo con cierto rol, etc.'

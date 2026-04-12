@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Agoge Academy API Discussions
+    url: https://github.com/craftxdog/agoge-academy-api/discussions
+    about: Ask questions, discuss backend ideas, or validate API design before opening an issue.
+  - name: Agoge Academy API Documentation
+    url: https://github.com/craftxdog/agoge-academy-api/blob/main/README.md
+    about: Review setup, usage, API notes, and local development guidance.
+  - name: Security Vulnerability
+    url: https://github.com/craftxdog/agoge-academy-api/security/policy
+    about: Report authentication, authorization, data exposure, or other security issues privately.
