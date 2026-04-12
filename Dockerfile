@@ -1,4 +1,4 @@
-FROM node:22-alpine AS dependencies
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -8,13 +8,12 @@ RUN corepack enable \
   && corepack prepare yarn@1.22.22 --activate \
   && yarn install --frozen-lockfile --non-interactive --ignore-scripts
 
-FROM dependencies AS build
-
 COPY . .
 
-RUN yarn build
+RUN if [ -f prisma/schema.prisma ]; then yarn prisma:generate; fi \
+  && yarn build
 
-FROM node:22-alpine AS runtime
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -28,8 +27,10 @@ RUN corepack enable \
   && yarn install --frozen-lockfile --non-interactive --production --ignore-scripts \
   && yarn cache clean
 
-COPY --from=build /app/dist ./dist
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 3000
+
+USER node
 
 CMD ["node", "dist/main.js"]
