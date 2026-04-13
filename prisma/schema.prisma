@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////
+// ENUMS
+//////////////////////
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum NotificationType {
+  PAYMENT_CREATED
+  PAYMENT_PAID
+  PAYMENT_OVERDUE
+}
+
+//////////////////////
+// MODELS
+//////////////////////
+
+model User {
+  id           String @id @default(uuid()) @db.Uuid
+  email        String @unique
+  username     String @unique
+  passwordHash String @map("password_hash")
+
+  firstName String @map("first_name")
+  lastName  String @map("last_name")
+
+  phone      String? @db.VarChar(20)
+  documentId String? @unique @map("document_id") @db.VarChar(30)
+  address    String? @db.VarChar(255)
+
+  role   Role       @default(CUSTOMER)
+  status UserStatus @default(ACTIVE)
+
+  // Auth avanzada
+  refreshTokenHash String? @map("refresh_token_hash")
+
+  // Soft delete
+  deletedAt DateTime? @map("deleted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  //////////////////////
+  // RELACIONES
+  //////////////////////
+
+  payments      Payment[]
+  schedules     Schedule[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+//////////////////////
+// PAYMENTS
+//////////////////////
+
+model Payment {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  amount Decimal       @db.Decimal(10, 2)
+  status PaymentStatus @default(PENDING)
+
+  dueDate DateTime  @map("due_date")
+  paidAt  DateTime? @map("paid_at")
+
+  // Para control de meses
+  month Int
+  year  Int
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, month, year])
+  @@index([userId, status])
+  @@index([dueDate])
+  @@map("payments")
+}
+
+//////////////////////
+// SCHEDULES
+//////////////////////
+
+model Schedule {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  day       Int // 0-6 (domingo a sábado)
+  startTime String @map("start_time") @db.VarChar(5) // "18:00"
+  endTime   String @map("end_time") @db.VarChar(5) // "19:00"
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day, startTime, endTime])
+  @@index([userId])
+  @@map("schedules")
+}
+
+//////////////////////
+// SETTINGS (GLOBAL)
+//////////////////////
+
+model Setting {
+  id String @id @default("global")
+
+  monthlyFee Decimal @map("monthly_fee") @db.Decimal(10, 2)
+  lateFee    Decimal @map("late_fee") @db.Decimal(10, 2)
+  currency   String  @default("USD") @db.VarChar(3)
+
+  paymentDay Int @map("payment_day") // día del mes (ej: 5 = paga el 5)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+//////////////////////
+// NOTIFICATIONS
+//////////////////////
+
+model Notification {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  type    NotificationType
+  title   String
+  message String
+  data    Json?
+
+  isRead Boolean @default(false) @map("is_read")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}

@@ -11,6 +11,8 @@ This repository is currently in its foundation stage: the NestJS application, te
 - ESLint 9 flat config
 - Prettier configuration
 - Jest unit and E2E test setup
+- Prisma 7 setup with PostgreSQL datasource
+- Initial user schema and migration
 - Commitlint conventional commit rules
 - GitHub issue templates for API bugs and backend feature requests
 - Pull request template focused on backend/API review
@@ -28,6 +30,8 @@ This repository is currently in its foundation stage: the NestJS application, te
 | Language | TypeScript |
 | Package manager | Yarn Classic |
 | Testing | Jest + Supertest |
+| Database ORM | Prisma |
+| Database | PostgreSQL |
 | Linting | ESLint + Prettier |
 | CI/CD | GitHub Actions |
 
@@ -68,6 +72,10 @@ GET http://localhost:3000/
 | `yarn test:e2e` | Run E2E tests |
 | `yarn test:cov` | Run tests with coverage |
 | `yarn format` | Format source and test files |
+| `yarn prisma:validate` | Validate the Prisma schema |
+| `yarn prisma:generate` | Generate Prisma Client |
+| `yarn prisma:migrate:dev` | Create/apply local database migrations |
+| `yarn prisma:migrate:deploy` | Apply migrations in CI/CD or production |
 
 For CI-like local test runs, prefer:
 
