@@ -4,6 +4,16 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.1.2] - 2026-04-19
+
+### Fixed
+
+- Corrected the production entrypoint used by CI smoke tests, Docker, and Docker Compose to `dist/src/main.js`.
+
+### Added
+
+- Added a local workflow guide for modules, branches, commits, merges, and versioning.
+
 ## [0.1.1] - 2026-04-19
 
 ### Fixed
