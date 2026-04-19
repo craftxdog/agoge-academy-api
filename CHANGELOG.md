@@ -4,6 +4,15 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.1.1] - 2026-04-19
+
+### Fixed
+
+- Disabled automatic staging deploys during setup so pushes do not fail when Docker Hub secrets are not configured.
+- Updated GitHub Actions dependencies to Node 24-compatible major versions.
+- Resolved Prisma transitive audit findings by pinning patched Hono packages through Yarn resolutions.
+- Added automatic closure for the dependency audit issue once the scheduled audit passes again.
+
 ## [0.1.0] - 2026-04-19
 
 ### Added
