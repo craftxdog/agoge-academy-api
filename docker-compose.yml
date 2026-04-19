@@ -20,7 +20,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ['node', 'dist/main.js']
+    command: ['node', 'dist/src/main.js']
     ports:
       - '3000:3000'
     environment:
