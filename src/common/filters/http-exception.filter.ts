@@ -5,7 +5,13 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import { TenantRequest } from '../interfaces/request-context.interface';
+import {
+  getOrganizationId,
+  getOrganizationSlug,
+  getRequestId,
+} from '../utils/request-context.util';
 
 type ErrorResponse = {
   message?: string | string[];
@@ -17,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
-    const request = context.getRequest<Request>();
+    const request = context.getRequest<TenantRequest>();
 
     const status =
       exception instanceof HttpException
@@ -38,6 +44,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
+      requestId: getRequestId(request),
+      organizationId: getOrganizationId(request),
+      organizationSlug: getOrganizationSlug(request),
       message: payload?.message ?? exceptionResponse ?? 'Internal server error',
       error: payload?.error ?? HttpStatus[status],
     });

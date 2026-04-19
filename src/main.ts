@@ -5,7 +5,14 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { API_PREFIX, API_VERSION } from './common/constants/routers.constant';
+import {
+  MEMBER_ID_HEADER,
+  ORGANIZATION_ID_HEADER,
+  ORGANIZATION_SLUG_HEADER,
+  REQUEST_ID_HEADER,
+} from './common/constants/request-context.constant';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { RequestContextInterceptor } from './common/interceptors/request-context.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import {
   API_DOCS_PATH,
@@ -42,11 +49,22 @@ async function bootstrap() {
     origin: parseCorsOrigins(process.env.FRONTEND_URL),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      REQUEST_ID_HEADER,
+      ORGANIZATION_ID_HEADER,
+      ORGANIZATION_SLUG_HEADER,
+      MEMBER_ID_HEADER,
+    ],
+    exposedHeaders: [REQUEST_ID_HEADER],
   });
 
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new RequestContextInterceptor(),
+    new TransformInterceptor(),
+  );
 
   const port = getPort();
 

@@ -1,4 +1,4 @@
 import { SetMetadata } from '@nestjs/common';
+import { ROLES_KEY, RoleKey } from '../constants/rbac.constant';
 
-export const ROLES_KEY = 'roles';
-export const Roles = (...roles: string[]) => SetMetadata(ROLES_KEY, roles);
+export const Roles = (...roles: RoleKey[]) => SetMetadata(ROLES_KEY, roles);
