@@ -6,8 +6,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { ApiErrorResponse, ApiResponseMeta } from '../interfaces';
 import { TenantRequest } from '../interfaces/request-context.interface';
 import {
+  getMemberId,
   getOrganizationId,
   getOrganizationSlug,
   getRequestId,
@@ -37,18 +39,38 @@ export class HttpExceptionFilter implements ExceptionFilter {
       typeof exceptionResponse === 'object' && exceptionResponse !== null
         ? (exceptionResponse as ErrorResponse)
         : undefined;
+    const message =
+      payload?.message ??
+      (typeof exceptionResponse === 'string'
+        ? exceptionResponse
+        : 'Internal server error');
 
     response.status(status).json({
       success: false,
       statusCode: status,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      method: request.method,
-      requestId: getRequestId(request),
-      organizationId: getOrganizationId(request),
-      organizationSlug: getOrganizationSlug(request),
-      message: payload?.message ?? exceptionResponse ?? 'Internal server error',
+      message,
       error: payload?.error ?? HttpStatus[status],
-    });
+      meta: this.buildMeta(request),
+    } satisfies ApiErrorResponse);
+  }
+
+  private buildMeta(request: TenantRequest): ApiResponseMeta {
+    const organizationId = getOrganizationId(request);
+    const organizationSlug = getOrganizationSlug(request);
+    const memberId = getMemberId(request);
+    const tenant =
+      organizationId || organizationSlug || memberId
+        ? { organizationId, organizationSlug, memberId }
+        : undefined;
+
+    return {
+      request: {
+        requestId: getRequestId(request),
+        method: request.method,
+        path: request.url,
+        timestamp: new Date().toISOString(),
+      },
+      tenant,
+    };
   }
 }

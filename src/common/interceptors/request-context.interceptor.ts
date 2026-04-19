@@ -4,10 +4,10 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { Observable } from 'rxjs';
 import { REQUEST_ID_HEADER } from '../constants/request-context.constant';
 import { TenantRequest } from '../interfaces/request-context.interface';
+import { resolveRequestId } from '../utils/request-id.util';
 import {
   getCurrentMember,
   getCurrentOrganization,
@@ -23,7 +23,9 @@ export class RequestContextInterceptor implements NestInterceptor {
     const response = http.getResponse<{
       setHeader: (key: string, value: string) => void;
     }>();
-    const requestId = getRequestId(request) ?? randomUUID();
+    const requestId = resolveRequestId(
+      getRequestId(request) ?? request.headers[REQUEST_ID_HEADER],
+    );
 
     request.requestId = requestId;
     request.tenant = {

@@ -17,6 +17,39 @@ from trusted tenant headers during early development:
 The `RequestContextInterceptor` normalizes these values into `request.tenant`
 and echoes `x-request-id` in the response headers.
 
+## API Response Envelope
+
+Successful endpoints are wrapped with this shape:
+
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Request completed successfully",
+  "data": {},
+  "meta": {
+    "request": {
+      "requestId": "uuid",
+      "method": "GET",
+      "path": "/api/v1/resource",
+      "timestamp": "2026-04-19T00:00:00.000Z"
+    },
+    "tenant": {
+      "organizationId": "uuid",
+      "organizationSlug": "agoge-academy",
+      "memberId": "uuid"
+    }
+  }
+}
+```
+
+For large lists, return a `PaginatedResult<T>` from a service or repository.
+The interceptor will move `pagination` into `meta.pagination` and expose the
+records as `data`.
+
+Cursor pagination is preferred for high-volume SaaS tables. Offset pagination is
+kept for small admin screens where total counts are useful.
+
 ## Decorators
 
 - `@CurrentUser()` returns the authenticated platform user.
@@ -37,3 +70,14 @@ auth layer to populate `request.user`, `request.organization` and
 
 This keeps common infrastructure lightweight and avoids mixing business lookups
 into generic guards.
+
+## Repositories
+
+The repository base classes provide read/write/bulk operations, cursor and
+offset pagination, tenant scoping, soft delete helpers and transactions. Domain
+repositories should extend the smallest useful base:
+
+- `ReadRepository` for read-only queries.
+- `GenericRepository` for CRUD and bulk operations.
+- `SoftDeletableRepository` for models with `deletedAt`.
+- `TenantRepository` for models with `organizationId`.
