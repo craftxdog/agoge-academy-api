@@ -2,7 +2,7 @@
 
 Backend API for **Agoge Academy**, built with NestJS and TypeScript.
 
-This repository is currently in its foundation stage: the NestJS application, testing setup, linting, commit standards, issue templates, pull request template, and CI/CD workflow structure are in place. Domain modules such as authentication, users, storage, analytics, Prisma models, and production Docker deployment are planned but not implemented yet.
+This repository is currently in its foundation stage: the NestJS application, testing setup, linting, commit standards, API versioning, Swagger docs, security middleware, Prisma setup, issue templates, pull request template, and CI/CD workflow structure are in place. Domain modules such as authentication, users, storage, analytics, and production deployment are planned but not implemented yet.
 
 ## Current Status
 
@@ -13,6 +13,10 @@ This repository is currently in its foundation stage: the NestJS application, te
 - Jest unit and E2E test setup
 - Prisma 7 setup with PostgreSQL datasource
 - Initial user schema and migration
+- URI API versioning under `/api/v1`
+- Swagger/OpenAPI docs in non-production environments
+- Global validation pipe, HTTP exception filter, and response transform interceptor
+- Helmet, cookie parser, and CORS bootstrap configuration
 - Commitlint conventional commit rules
 - GitHub issue templates for API bugs and backend feature requests
 - Pull request template focused on backend/API review
@@ -55,10 +59,16 @@ cp .env.example .env
 yarn start:dev
 ```
 
-The default endpoint is:
+The API uses URI versioning. In development, the default versioned root endpoint is:
 
 ```text
-GET http://localhost:3000/
+GET http://localhost:3000/api/v1
+```
+
+Swagger docs are available outside production at:
+
+```text
+http://localhost:3000/api/v1/docs
 ```
 
 ## Scripts
@@ -67,11 +77,14 @@ GET http://localhost:3000/
 | --- | --- |
 | `yarn start:dev` | Start the NestJS development server |
 | `yarn build` | Build the application |
-| `yarn lint` | Run ESLint with auto-fix |
+| `yarn lint` | Run ESLint checks |
+| `yarn lint:fix` | Run ESLint with auto-fix |
 | `yarn test` | Run unit tests |
+| `yarn test:ci` | Run unit tests without Watchman and in-band |
 | `yarn test:e2e` | Run E2E tests |
 | `yarn test:cov` | Run tests with coverage |
 | `yarn format` | Format source and test files |
+| `yarn format:check` | Check source and test file formatting |
 | `yarn prisma:validate` | Validate the Prisma schema |
 | `yarn prisma:generate` | Generate Prisma Client |
 | `yarn prisma:migrate:dev` | Create/apply local database migrations |
@@ -80,9 +93,9 @@ GET http://localhost:3000/
 For CI-like local test runs, prefer:
 
 ```bash
-yarn test --watchman=false --runInBand
-yarn test:e2e --watchman=false --runInBand
-yarn test:cov --watchman=false --runInBand
+yarn test:ci
+yarn test:e2e
+yarn test:cov
 ```
 
 ## API Versioning Plan
@@ -129,11 +142,8 @@ Docker deployment workflows include preflight checks and publish images only aft
 
 ## Roadmap
 
-- Add Prisma schema and database migrations
 - Implement authentication and authorization
 - Implement user management
-- Add API version prefix
-- Add Swagger/OpenAPI documentation
 - Add real staging and production deployment targets
 
 ## Contributing
