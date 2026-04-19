@@ -4,6 +4,27 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.1.0] - 2026-04-19
+
+### Added
+
+- URI API versioning for the setup phase under `/api/v1`.
+- Swagger/OpenAPI documentation outside production at `/api/v1/docs`.
+- Global validation, HTTP exception filtering, and response transformation.
+- Security and request middleware setup with Helmet, CORS, and cookie parser.
+- Prisma module registration with lazy database connection behavior.
+- CI-friendly test scripts that avoid Watchman in constrained environments.
+
+### Changed
+
+- Promoted the setup baseline from `0.0.1` to `0.1.0`.
+- Split linting into check-only and auto-fix commands.
+- Moved E2E Jest module resolution in sync with TypeScript base URL imports.
+
+### Removed
+
+- Removed the obsolete `.eslintignore` file now that ESLint flat config owns ignore rules.
+
 ## [0.0.1] - 2026-04-12
 
 ### Added
