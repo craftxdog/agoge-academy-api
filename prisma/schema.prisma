@@ -11,148 +11,623 @@ datasource db {
 // ENUMS
 //////////////////////
 
-enum Role {
-  ADMIN
-  CUSTOMER
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  SUPPORT
+  USER
 }
 
 enum UserStatus {
   ACTIVE
+  INVITED
   SUSPENDED
 }
 
-enum PaymentStatus {
+enum MemberStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  REMOVED
+}
+
+enum ModuleStatus {
+  ACTIVE
+  DEPRECATED
+}
+
+enum ScreenType {
+  SYSTEM
+  CUSTOM_PAGE
+  EXTERNAL_LINK
+  FORM
+  EMBED
+}
+
+enum InvitationStatus {
   PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum PaymentFrequency {
+  ONE_TIME
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum PaymentStatus {
+  DRAFT
+  PENDING
+  PARTIALLY_PAID
   PAID
   OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentTransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
 }
 
 enum NotificationType {
   PAYMENT_CREATED
   PAYMENT_PAID
   PAYMENT_OVERDUE
+  INVITATION_CREATED
+  ROLE_ASSIGNED
+  MODULE_ENABLED
+  SYSTEM_MESSAGE
 }
 
 //////////////////////
-// MODELS
+// ORGANIZATIONS
+//////////////////////
+
+model Organization {
+  id              String             @id @default(uuid()) @db.Uuid
+  slug            String             @unique @db.VarChar(80)
+  name            String
+  legalName       String?            @map("legal_name")
+  taxId           String?            @map("tax_id") @db.VarChar(60)
+  status          OrganizationStatus @default(ACTIVE)
+  timezone        String             @default("America/Managua") @db.VarChar(80)
+  locale          String             @default("es-NI") @db.VarChar(10)
+  defaultCurrency String             @default("USD") @map("default_currency") @db.VarChar(3)
+
+  branding OrganizationBranding?
+
+  settings       OrganizationSetting[]
+  members        OrganizationMember[]
+  roles          Role[]
+  invitations    Invitation[]
+  modules        OrganizationModule[]
+  screens        OrganizationScreen[]
+  locations      Location[]
+  businessHours  BusinessHour[]
+  exceptions     ScheduleException[]
+  paymentTypes   PaymentType[]
+  paymentMethods PaymentMethod[]
+  payments       Payment[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([deletedAt])
+  @@map("organizations")
+}
+
+model OrganizationBranding {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @map("organization_id") @db.Uuid
+
+  logoUrl        String? @map("logo_url")
+  iconUrl        String? @map("icon_url")
+  primaryColor   String? @map("primary_color") @db.VarChar(20)
+  secondaryColor String? @map("secondary_color") @db.VarChar(20)
+  accentColor    String? @map("accent_color") @db.VarChar(20)
+  theme          Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("organization_branding")
+}
+
+model OrganizationSetting {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+
+  namespace String @db.VarChar(80)
+  key       String @db.VarChar(120)
+  value     Json
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, namespace, key])
+  @@index([organizationId, namespace])
+  @@map("organization_settings")
+}
+
+//////////////////////
+// USERS AND MEMBERS
 //////////////////////
 
 model User {
-  id           String @id @default(uuid()) @db.Uuid
-  email        String @unique
-  username     String @unique
-  passwordHash String @map("password_hash")
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  username     String? @unique
+  passwordHash String  @map("password_hash")
 
   firstName String @map("first_name")
   lastName  String @map("last_name")
 
-  phone      String? @db.VarChar(20)
-  documentId String? @unique @map("document_id") @db.VarChar(30)
-  address    String? @db.VarChar(255)
+  platformRole PlatformRole @default(USER) @map("platform_role")
+  status       UserStatus   @default(ACTIVE)
 
-  role   Role       @default(CUSTOMER)
-  status UserStatus @default(ACTIVE)
-
-  // Auth avanzada
   refreshTokenHash String? @map("refresh_token_hash")
 
-  // Soft delete
+  memberships   OrganizationMember[]
+  notifications Notification[]       @relation("UserNotifications")
+  auditLogs     AuditLog[]           @relation("AuditActorUser")
+
   deletedAt DateTime? @map("deleted_at")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  //////////////////////
-  // RELACIONES
-  //////////////////////
-
-  payments      Payment[]
-  schedules     Schedule[]
-  notifications Notification[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@index([status])
-  @@index([role])
+  @@index([platformRole])
   @@index([deletedAt])
   @@map("users")
 }
 
-//////////////////////
-// PAYMENTS
-//////////////////////
+model OrganizationMember {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  userId         String @map("user_id") @db.Uuid
 
-model Payment {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @map("user_id") @db.Uuid
+  status     MemberStatus @default(ACTIVE)
+  phone      String?      @db.VarChar(20)
+  documentId String?      @map("document_id") @db.VarChar(30)
+  address    String?      @db.VarChar(255)
+  joinedAt   DateTime?    @map("joined_at")
 
-  amount Decimal       @db.Decimal(10, 2)
-  status PaymentStatus @default(PENDING)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  dueDate DateTime  @map("due_date")
-  paidAt  DateTime? @map("paid_at")
+  roles           MemberRole[]
+  sentInvitations Invitation[]     @relation("InvitationSender")
+  payments        Payment[]
+  schedules       MemberSchedule[]
+  notifications   Notification[]   @relation("MemberNotifications")
+  auditLogs       AuditLog[]       @relation("AuditActorMember")
 
-  // Para control de meses
-  month Int
-  year  Int
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, documentId])
+  @@index([organizationId, status])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("organization_members")
+}
+
+model Invitation {
+  id                String           @id @default(uuid()) @db.Uuid
+  organizationId    String           @map("organization_id") @db.Uuid
+  invitedByMemberId String?          @map("invited_by_member_id") @db.Uuid
+  email             String
+  status            InvitationStatus @default(PENDING)
+  tokenHash         String           @unique @map("token_hash")
+  expiresAt         DateTime         @map("expires_at")
+  acceptedAt        DateTime?        @map("accepted_at")
+  revokedAt         DateTime?        @map("revoked_at")
+
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedByMember OrganizationMember? @relation("InvitationSender", fields: [invitedByMemberId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@unique([organizationId, email, status])
+  @@index([organizationId, status])
+  @@index([email])
+  @@map("invitations")
+}
 
-  @@unique([userId, month, year])
-  @@index([userId, status])
-  @@index([dueDate])
-  @@map("payments")
+//////////////////////
+// RBAC
+//////////////////////
+
+model Role {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+
+  key         String  @db.VarChar(80)
+  name        String
+  description String?
+  isSystem    Boolean @default(false) @map("is_system")
+  isDefault   Boolean @default(false) @map("is_default")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  RolePermission[]
+  members      MemberRole[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+model Permission {
+  id       String  @id @default(uuid()) @db.Uuid
+  moduleId String? @map("module_id") @db.Uuid
+
+  key         String  @unique @db.VarChar(120)
+  name        String
+  description String?
+
+  module AppModule?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  roles  RolePermission[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([moduleId])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model MemberRole {
+  memberId String @map("member_id") @db.Uuid
+  roleId   String @map("role_id") @db.Uuid
+
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  role   Role               @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([memberId, roleId])
+  @@map("member_roles")
+}
+
+//////////////////////
+// MODULES AND SCREENS
+//////////////////////
+
+model AppModule {
+  id          String       @id @default(uuid()) @db.Uuid
+  key         String       @unique @db.VarChar(80)
+  name        String
+  description String?
+  status      ModuleStatus @default(ACTIVE)
+  sortOrder   Int          @default(0) @map("sort_order")
+
+  screens       AppScreen[]
+  permissions   Permission[]
+  organizations OrganizationModule[]
+  customScreens OrganizationScreen[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("app_modules")
+}
+
+model AppScreen {
+  id       String @id @default(uuid()) @db.Uuid
+  moduleId String @map("module_id") @db.Uuid
+
+  key                   String  @db.VarChar(120)
+  name                  String
+  path                  String
+  requiredPermissionKey String? @map("required_permission_key") @db.VarChar(120)
+  sortOrder             Int     @default(0) @map("sort_order")
+
+  module        AppModule            @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  organizations OrganizationScreen[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([moduleId, key])
+  @@index([moduleId])
+  @@map("app_screens")
+}
+
+model OrganizationModule {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  moduleId       String @map("module_id") @db.Uuid
+
+  isEnabled Boolean @default(true) @map("is_enabled")
+  config    Json?
+  sortOrder Int     @default(0) @map("sort_order")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  module       AppModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, moduleId])
+  @@index([organizationId, isEnabled])
+  @@map("organization_modules")
+}
+
+model OrganizationScreen {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  appScreenId    String? @map("app_screen_id") @db.Uuid
+  moduleId       String? @map("module_id") @db.Uuid
+
+  key                   String     @db.VarChar(120)
+  title                 String
+  path                  String?
+  type                  ScreenType @default(SYSTEM)
+  requiredPermissionKey String?    @map("required_permission_key") @db.VarChar(120)
+  config                Json?
+  sortOrder             Int        @default(0) @map("sort_order")
+  isVisible             Boolean    @default(true) @map("is_visible")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  appScreen    AppScreen?   @relation(fields: [appScreenId], references: [id], onDelete: Cascade)
+  module       AppModule?   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, key])
+  @@index([organizationId, isVisible])
+  @@index([appScreenId])
+  @@map("organization_screens")
 }
 
 //////////////////////
 // SCHEDULES
 //////////////////////
 
-model Schedule {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @map("user_id") @db.Uuid
+model Location {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
 
-  day       Int // 0-6 (domingo a sábado)
-  startTime String @map("start_time") @db.VarChar(5) // "18:00"
-  endTime   String @map("end_time") @db.VarChar(5) // "19:00"
+  name     String
+  address  String? @db.VarChar(255)
+  timezone String? @db.VarChar(80)
+  isActive Boolean @default(true) @map("is_active")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, day, startTime, endTime])
-  @@index([userId])
-  @@map("schedules")
-}
-
-//////////////////////
-// SETTINGS (GLOBAL)
-//////////////////////
-
-model Setting {
-  id String @id @default("global")
-
-  monthlyFee Decimal @map("monthly_fee") @db.Decimal(10, 2)
-  lateFee    Decimal @map("late_fee") @db.Decimal(10, 2)
-  currency   String  @default("USD") @db.VarChar(3)
-
-  paymentDay Int @map("payment_day") // día del mes (ej: 5 = paga el 5)
+  organization  Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  businessHours BusinessHour[]
+  exceptions    ScheduleException[]
+  schedules     MemberSchedule[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("settings")
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("locations")
+}
+
+model BusinessHour {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  locationId     String? @map("location_id") @db.Uuid
+
+  dayOfWeek Int      @map("day_of_week")
+  startTime DateTime @map("start_time") @db.Time(0)
+  endTime   DateTime @map("end_time") @db.Time(0)
+  isClosed  Boolean  @default(false) @map("is_closed")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, locationId, dayOfWeek, startTime, endTime])
+  @@index([organizationId, dayOfWeek])
+  @@map("business_hours")
+}
+
+model ScheduleException {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  locationId     String? @map("location_id") @db.Uuid
+
+  date      DateTime  @db.Date
+  name      String
+  startTime DateTime? @map("start_time") @db.Time(0)
+  endTime   DateTime? @map("end_time") @db.Time(0)
+  isClosed  Boolean   @default(true) @map("is_closed")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location     Location?    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, locationId, date, name])
+  @@index([organizationId, date])
+  @@map("schedule_exceptions")
+}
+
+model MemberSchedule {
+  id         String  @id @default(uuid()) @db.Uuid
+  memberId   String  @map("member_id") @db.Uuid
+  locationId String? @map("location_id") @db.Uuid
+
+  dayOfWeek Int      @map("day_of_week")
+  startTime DateTime @map("start_time") @db.Time(0)
+  endTime   DateTime @map("end_time") @db.Time(0)
+
+  member   OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  location Location?          @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([memberId, locationId, dayOfWeek, startTime, endTime])
+  @@index([memberId])
+  @@map("member_schedules")
 }
 
 //////////////////////
-// NOTIFICATIONS
+// PAYMENTS
+//////////////////////
+
+model PaymentType {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+
+  key         String           @db.VarChar(80)
+  name        String
+  description String?
+  amount      Decimal?         @db.Decimal(10, 2)
+  currency    String           @default("USD") @db.VarChar(3)
+  frequency   PaymentFrequency @default(ONE_TIME)
+  isActive    Boolean          @default(true) @map("is_active")
+  config      Json?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  payments     Payment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, key])
+  @@index([organizationId, isActive])
+  @@map("payment_types")
+}
+
+model PaymentMethod {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+
+  key               String  @db.VarChar(80)
+  name              String
+  description       String?
+  requiresReference Boolean @default(false) @map("requires_reference")
+  isActive          Boolean @default(true) @map("is_active")
+  config            Json?
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions PaymentTransaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, key])
+  @@index([organizationId, isActive])
+  @@map("payment_methods")
+}
+
+model Payment {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  memberId       String  @map("member_id") @db.Uuid
+  paymentTypeId  String? @map("payment_type_id") @db.Uuid
+
+  invoiceNumber String?       @map("invoice_number") @db.VarChar(80)
+  amount        Decimal       @db.Decimal(10, 2)
+  currency      String        @default("USD") @db.VarChar(3)
+  status        PaymentStatus @default(PENDING)
+
+  dueDate     DateTime  @map("due_date")
+  paidAt      DateTime? @map("paid_at")
+  periodMonth Int?      @map("period_month")
+  periodYear  Int?      @map("period_year")
+
+  notes    String?
+  metadata Json?
+
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  member       OrganizationMember   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  paymentType  PaymentType?         @relation(fields: [paymentTypeId], references: [id], onDelete: SetNull)
+  transactions PaymentTransaction[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, status])
+  @@index([memberId, status])
+  @@index([dueDate])
+  @@index([paymentTypeId])
+  @@map("payments")
+}
+
+model PaymentTransaction {
+  id              String  @id @default(uuid()) @db.Uuid
+  paymentId       String  @map("payment_id") @db.Uuid
+  paymentMethodId String? @map("payment_method_id") @db.Uuid
+
+  amount      Decimal                  @db.Decimal(10, 2)
+  currency    String                   @default("USD") @db.VarChar(3)
+  status      PaymentTransactionStatus @default(PENDING)
+  reference   String?                  @db.VarChar(120)
+  processedAt DateTime?                @map("processed_at")
+  metadata    Json?
+
+  payment       Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([paymentId, status])
+  @@index([paymentMethodId])
+  @@map("payment_transactions")
+}
+
+//////////////////////
+// NOTIFICATIONS AND AUDIT
 //////////////////////
 
 model Notification {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @map("user_id") @db.Uuid
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  userId         String? @map("user_id") @db.Uuid
+  memberId       String? @map("member_id") @db.Uuid
 
   type    NotificationType
   title   String
@@ -161,12 +636,44 @@ model Notification {
 
   isRead Boolean @default(false) @map("is_read")
 
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?               @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  member       OrganizationMember? @relation("MemberNotifications", fields: [memberId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@index([organizationId, isRead])
   @@index([userId, isRead])
-  @@index([userId, createdAt])
+  @@index([memberId, isRead])
+  @@index([organizationId, createdAt])
   @@map("notifications")
+}
+
+model AuditLog {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  actorUserId    String? @map("actor_user_id") @db.Uuid
+  actorMemberId  String? @map("actor_member_id") @db.Uuid
+
+  action     String  @db.VarChar(120)
+  entityType String  @map("entity_type") @db.VarChar(120)
+  entityId   String? @map("entity_id") @db.VarChar(120)
+  before     Json?
+  after      Json?
+  metadata   Json?
+  ipAddress  String? @map("ip_address") @db.VarChar(60)
+  userAgent  String? @map("user_agent")
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser    User?               @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorMember  OrganizationMember? @relation("AuditActorMember", fields: [actorMemberId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId])
+  @@index([actorMemberId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
 }
