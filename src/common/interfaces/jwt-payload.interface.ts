@@ -1,6 +1,7 @@
 import { PlatformRole } from 'generated/prisma/enums';
 
 export type JwtAccessPayload = {
+  tokenType?: 'access' | 'refresh';
   sub: string;
   email: string;
   username?: string | null;

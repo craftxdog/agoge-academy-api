@@ -2,15 +2,14 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from 'generated/prisma/client';
 import { Pool } from 'pg';
+import { getDatabaseConfig } from '../config';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor() {
-    const connectionString =
-      process.env.DATABASE_URL ??
-      'postgresql://postgres:postgres@localhost:5432/agoge?schema=public';
+    const connectionString = getDatabaseConfig().url;
     const pool = new Pool({ connectionString });
     const adapter = new PrismaPg(pool);
 

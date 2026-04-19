@@ -37,6 +37,7 @@ export type TenantRequestContext = {
 
 export type TenantRequest = Request & {
   requestId?: string;
+  cookies?: Record<string, string | undefined>;
   user?: AuthenticatedUserContext;
   organization?: OrganizationContext;
   member?: MemberContext;

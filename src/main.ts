@@ -14,15 +14,11 @@ import {
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RequestContextInterceptor } from './common/interceptors/request-context.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import {
-  API_DOCS_PATH,
-  APP_NAME,
-  getPort,
-  parseCorsOrigins,
-} from './config/app.config';
+import { API_DOCS_PATH, APP_NAME, getAppConfig } from './config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const appConfig = getAppConfig();
 
   app.use(cookieParser());
 
@@ -46,7 +42,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: parseCorsOrigins(process.env.FRONTEND_URL),
+    origin: appConfig.corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -65,8 +61,6 @@ async function bootstrap() {
     new RequestContextInterceptor(),
     new TransformInterceptor(),
   );
-
-  const port = getPort();
 
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
@@ -88,11 +82,11 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup(API_DOCS_PATH, app, document);
     console.log(
-      `Swagger documentation available at: http://localhost:${port}/${API_DOCS_PATH}`,
+      `Swagger documentation available at: http://localhost:${appConfig.port}/${API_DOCS_PATH}`,
     );
   }
 
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}`);
+  await app.listen(appConfig.port);
+  console.log(`Application is running on: http://localhost:${appConfig.port}`);
 }
 void bootstrap();

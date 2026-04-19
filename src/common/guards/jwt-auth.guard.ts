@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { PlatformRole } from 'generated/prisma/enums';
+import { getJwtConfig } from '../../config/jwt.config';
 import { IS_PUBLIC_KEY } from '../constants';
 import { JwtAccessPayload, TenantRequest } from '../interfaces';
 import { extractBearerToken } from '../utils';
@@ -38,9 +39,18 @@ export class JwtAuthGuard implements CanActivate {
 
   protected async verifyToken(token: string): Promise<JwtAccessPayload> {
     try {
-      return await this.jwtService.verifyAsync<JwtAccessPayload>(token, {
-        secret: process.env.JWT_SECRET,
-      });
+      const payload = await this.jwtService.verifyAsync<JwtAccessPayload>(
+        token,
+        {
+          secret: getJwtConfig().accessSecret,
+        },
+      );
+
+      if (payload.tokenType && payload.tokenType !== 'access') {
+        throw new Error('Invalid token type');
+      }
+
+      return payload;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
