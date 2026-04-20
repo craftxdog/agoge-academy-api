@@ -1,0 +1,423 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ScreenType } from 'generated/prisma/enums';
+import { SYSTEM_MODULES } from '../../../common';
+import {
+  CreateOrganizationScreenDto,
+  OrganizationBrandingResponseDto,
+  OrganizationModuleResponseDto,
+  OrganizationProfileResponseDto,
+  OrganizationScreenResponseDto,
+  OrganizationSettingInputDto,
+  OrganizationSettingResponseDto,
+  OrganizationSettingsQueryDto,
+  UpdateOrganizationBrandingDto,
+  UpdateOrganizationModuleDto,
+  UpdateOrganizationProfileDto,
+  UpdateOrganizationScreenDto,
+  UpsertOrganizationSettingsDto,
+} from '../dto';
+import {
+  SettingsBrandingRecord,
+  SettingsModuleRecord,
+  SettingsOrganizationRecord,
+  SettingsRepository,
+  SettingsScreenRecord,
+  SettingsValueRecord,
+} from '../repositories/settings.repository';
+
+@Injectable()
+export class SettingsService {
+  constructor(private readonly settingsRepository: SettingsRepository) {}
+
+  async getOrganizationProfile(
+    organizationId: string,
+  ): Promise<OrganizationProfileResponseDto> {
+    const organization = await this.getOrganizationOrThrow(organizationId);
+
+    return this.mapOrganization(organization);
+  }
+
+  async updateOrganizationProfile(
+    organizationId: string,
+    dto: UpdateOrganizationProfileDto,
+  ): Promise<OrganizationProfileResponseDto> {
+    await this.getOrganizationOrThrow(organizationId);
+    const organization = await this.settingsRepository.updateOrganization(
+      organizationId,
+      {
+        ...dto,
+        name: dto.name?.trim(),
+        legalName: dto.legalName?.trim(),
+        taxId: dto.taxId?.trim(),
+        timezone: dto.timezone?.trim(),
+        locale: dto.locale?.trim(),
+        defaultCurrency: dto.defaultCurrency?.trim().toUpperCase(),
+      },
+    );
+
+    return this.mapOrganization(organization);
+  }
+
+  async updateBranding(
+    organizationId: string,
+    dto: UpdateOrganizationBrandingDto,
+  ): Promise<OrganizationBrandingResponseDto> {
+    await this.getOrganizationOrThrow(organizationId);
+    const branding = await this.settingsRepository.upsertBranding(
+      organizationId,
+      {
+        ...dto,
+        logoUrl: dto.logoUrl?.trim(),
+        iconUrl: dto.iconUrl?.trim(),
+        primaryColor: dto.primaryColor?.trim(),
+        secondaryColor: dto.secondaryColor?.trim(),
+        accentColor: dto.accentColor?.trim(),
+      },
+    );
+
+    return this.mapBranding(branding);
+  }
+
+  async listSettings(
+    organizationId: string,
+    query: OrganizationSettingsQueryDto,
+  ): Promise<OrganizationSettingResponseDto[]> {
+    await this.getOrganizationOrThrow(organizationId);
+    const settings = await this.settingsRepository.findSettings(
+      organizationId,
+      {
+        namespace: query.namespace?.trim().toLowerCase(),
+      },
+    );
+
+    return settings.map((setting) => this.mapSetting(setting));
+  }
+
+  async upsertSettings(
+    organizationId: string,
+    dto: UpsertOrganizationSettingsDto,
+  ): Promise<OrganizationSettingResponseDto[]> {
+    await this.getOrganizationOrThrow(organizationId);
+    const settings = dto.settings.map((setting) =>
+      this.normalizeSetting(setting),
+    );
+    const duplicateKeys = this.findDuplicateSettingKeys(settings);
+
+    if (duplicateKeys.length > 0) {
+      throw new BadRequestException({
+        message: 'Duplicate settings are not allowed in the same request',
+        duplicateSettings: duplicateKeys,
+      });
+    }
+
+    const savedSettings = await this.settingsRepository.upsertSettings(
+      organizationId,
+      settings,
+    );
+
+    return savedSettings.map((setting) => this.mapSetting(setting));
+  }
+
+  async listModules(
+    organizationId: string,
+  ): Promise<OrganizationModuleResponseDto[]> {
+    await this.getOrganizationOrThrow(organizationId);
+    const modules = await this.settingsRepository.findModules(organizationId);
+
+    return modules.map((module) => this.mapModule(module));
+  }
+
+  async updateModule(
+    organizationId: string,
+    moduleKey: string,
+    dto: UpdateOrganizationModuleDto,
+  ): Promise<OrganizationModuleResponseDto> {
+    await this.getOrganizationOrThrow(organizationId);
+    const normalizedModuleKey = moduleKey.trim().toLowerCase();
+
+    if (
+      normalizedModuleKey === SYSTEM_MODULES.settings &&
+      dto.isEnabled === false
+    ) {
+      throw new ForbiddenException('The settings module cannot be disabled');
+    }
+
+    const exists =
+      await this.settingsRepository.appModuleExists(normalizedModuleKey);
+
+    if (!exists) {
+      throw new NotFoundException('Module was not found in the app catalog');
+    }
+
+    const module = await this.settingsRepository.updateModule({
+      organizationId,
+      moduleKey: normalizedModuleKey,
+      dto,
+    });
+
+    return this.mapModule(module);
+  }
+
+  async listScreens(
+    organizationId: string,
+  ): Promise<OrganizationScreenResponseDto[]> {
+    await this.getOrganizationOrThrow(organizationId);
+    const screens = await this.settingsRepository.findScreens(organizationId);
+
+    return screens.map((screen) => this.mapScreen(screen));
+  }
+
+  async createScreen(
+    organizationId: string,
+    dto: CreateOrganizationScreenDto,
+  ): Promise<OrganizationScreenResponseDto> {
+    await this.getOrganizationOrThrow(organizationId);
+    const normalizedDto = {
+      ...dto,
+      key: dto.key.trim().toLowerCase(),
+      title: dto.title.trim(),
+      path: dto.path?.trim(),
+      moduleKey: dto.moduleKey?.trim().toLowerCase(),
+      requiredPermissionKey: dto.requiredPermissionKey?.trim().toLowerCase(),
+    };
+
+    if (normalizedDto.type === ScreenType.SYSTEM) {
+      throw new BadRequestException(
+        'System screens can only be created from the app catalog',
+      );
+    }
+
+    await this.assertScreenReferencesExist(normalizedDto);
+
+    const screen = await this.settingsRepository.createScreen({
+      organizationId,
+      dto: normalizedDto,
+    });
+
+    return this.mapScreen(screen);
+  }
+
+  async updateScreen(
+    organizationId: string,
+    screenId: string,
+    dto: UpdateOrganizationScreenDto,
+  ): Promise<OrganizationScreenResponseDto> {
+    await this.getOrganizationOrThrow(organizationId);
+    const screen = await this.getScreenOrThrow(organizationId, screenId);
+
+    if (screen.type === ScreenType.SYSTEM && dto.type !== undefined) {
+      throw new ForbiddenException('System screen type cannot be changed');
+    }
+
+    if (dto.requiredPermissionKey) {
+      await this.assertPermissionExists(dto.requiredPermissionKey);
+    }
+
+    const updatedScreen = await this.settingsRepository.updateScreen({
+      organizationId,
+      screenId,
+      dto: {
+        ...dto,
+        title: dto.title?.trim(),
+        path: dto.path?.trim(),
+        requiredPermissionKey: dto.requiredPermissionKey?.trim().toLowerCase(),
+      },
+    });
+
+    return this.mapScreen(updatedScreen);
+  }
+
+  async deleteScreen(
+    organizationId: string,
+    screenId: string,
+  ): Promise<OrganizationScreenResponseDto> {
+    await this.getOrganizationOrThrow(organizationId);
+    const screen = await this.getScreenOrThrow(organizationId, screenId);
+
+    if (screen.type === ScreenType.SYSTEM || screen.appScreenId) {
+      throw new ForbiddenException('System screens cannot be deleted');
+    }
+
+    const deletedScreen = await this.settingsRepository.deleteScreen(
+      organizationId,
+      screenId,
+    );
+
+    return this.mapScreen(deletedScreen);
+  }
+
+  private async getOrganizationOrThrow(
+    organizationId: string,
+  ): Promise<SettingsOrganizationRecord> {
+    const organization =
+      await this.settingsRepository.findOrganization(organizationId);
+
+    if (!organization) {
+      throw new NotFoundException('Organization was not found');
+    }
+
+    return organization;
+  }
+
+  private async getScreenOrThrow(
+    organizationId: string,
+    screenId: string,
+  ): Promise<SettingsScreenRecord> {
+    const screen = await this.settingsRepository.findScreenById(
+      organizationId,
+      screenId,
+    );
+
+    if (!screen) {
+      throw new NotFoundException('Screen was not found in this tenant');
+    }
+
+    return screen;
+  }
+
+  private async assertScreenReferencesExist(
+    dto: CreateOrganizationScreenDto,
+  ): Promise<void> {
+    if (
+      dto.moduleKey &&
+      !(await this.settingsRepository.appModuleExists(dto.moduleKey))
+    ) {
+      throw new BadRequestException('Module key does not exist');
+    }
+
+    if (dto.requiredPermissionKey) {
+      await this.assertPermissionExists(dto.requiredPermissionKey);
+    }
+  }
+
+  private async assertPermissionExists(permissionKey: string): Promise<void> {
+    const exists = await this.settingsRepository.permissionExists(
+      permissionKey.trim().toLowerCase(),
+    );
+
+    if (!exists) {
+      throw new BadRequestException('Required permission key does not exist');
+    }
+  }
+
+  private normalizeSetting(
+    setting: OrganizationSettingInputDto,
+  ): OrganizationSettingInputDto {
+    if (setting.value === undefined) {
+      throw new BadRequestException('Setting value cannot be undefined');
+    }
+
+    return {
+      namespace: setting.namespace.trim().toLowerCase(),
+      key: setting.key.trim().toLowerCase(),
+      value: setting.value,
+    };
+  }
+
+  private findDuplicateSettingKeys(
+    settings: OrganizationSettingInputDto[],
+  ): string[] {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+
+    for (const setting of settings) {
+      const key = `${setting.namespace}.${setting.key}`;
+
+      if (seen.has(key)) {
+        duplicates.add(key);
+      }
+
+      seen.add(key);
+    }
+
+    return [...duplicates];
+  }
+
+  private mapOrganization(
+    organization: SettingsOrganizationRecord,
+  ): OrganizationProfileResponseDto {
+    return {
+      id: organization.id,
+      slug: organization.slug,
+      name: organization.name,
+      legalName: organization.legalName,
+      taxId: organization.taxId,
+      status: organization.status,
+      timezone: organization.timezone,
+      locale: organization.locale,
+      defaultCurrency: organization.defaultCurrency,
+      branding: organization.branding
+        ? this.mapBranding(organization.branding)
+        : null,
+      createdAt: organization.createdAt,
+      updatedAt: organization.updatedAt,
+    };
+  }
+
+  private mapBranding(
+    branding: SettingsBrandingRecord,
+  ): OrganizationBrandingResponseDto {
+    return {
+      id: branding.id,
+      logoUrl: branding.logoUrl,
+      iconUrl: branding.iconUrl,
+      primaryColor: branding.primaryColor,
+      secondaryColor: branding.secondaryColor,
+      accentColor: branding.accentColor,
+      theme: branding.theme,
+    };
+  }
+
+  private mapSetting(
+    setting: SettingsValueRecord,
+  ): OrganizationSettingResponseDto {
+    return {
+      id: setting.id,
+      namespace: setting.namespace,
+      key: setting.key,
+      value: setting.value,
+      updatedAt: setting.updatedAt,
+    };
+  }
+
+  private mapModule(
+    module: SettingsModuleRecord,
+  ): OrganizationModuleResponseDto {
+    return {
+      id: module.id,
+      module: {
+        key: module.module.key,
+        name: module.module.name,
+        description: module.module.description,
+        status: module.module.status,
+      },
+      isEnabled: module.isEnabled,
+      config: module.config,
+      sortOrder: module.sortOrder,
+      updatedAt: module.updatedAt,
+    };
+  }
+
+  private mapScreen(
+    screen: SettingsScreenRecord,
+  ): OrganizationScreenResponseDto {
+    return {
+      id: screen.id,
+      key: screen.key,
+      title: screen.title,
+      path: screen.path,
+      type: screen.type,
+      moduleKey: screen.module?.key ?? null,
+      requiredPermissionKey: screen.requiredPermissionKey,
+      config: screen.config,
+      sortOrder: screen.sortOrder,
+      isVisible: screen.isVisible,
+      updatedAt: screen.updatedAt,
+    };
+  }
+}
