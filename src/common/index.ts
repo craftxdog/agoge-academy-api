@@ -5,5 +5,6 @@ export * from './filters';
 export * from './guards';
 export * from './interceptors';
 export * from './interfaces';
+export * from './middleware';
 export * from './repository';
 export * from './utils';

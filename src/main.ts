@@ -14,6 +14,7 @@ import {
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { RequestContextInterceptor } from './common/interceptors/request-context.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AccessLogMiddleware } from './common/middleware/access-log.middleware';
 import { API_DOCS_PATH, APP_NAME, getAppConfig } from './config';
 
 async function bootstrap() {
@@ -21,6 +22,8 @@ async function bootstrap() {
   const appConfig = getAppConfig();
 
   app.use(cookieParser());
+  const accessLogMiddleware = new AccessLogMiddleware();
+  app.use(accessLogMiddleware.use.bind(accessLogMiddleware));
 
   app.use(helmet());
 
