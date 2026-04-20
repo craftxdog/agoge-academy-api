@@ -33,6 +33,7 @@ module.exports = {
         'auth',
         'billing',
         'rbac',
+        'schedules',
         'settings',
         'users',
         'storage',
