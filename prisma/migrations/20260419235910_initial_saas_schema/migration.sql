@@ -1,0 +1,5 @@
+-- RenameIndex
+ALTER INDEX "business_hours_organization_id_location_id_day_of_week_start_ti" RENAME TO "business_hours_organization_id_location_id_day_of_week_star_key";
+
+-- RenameIndex
+ALTER INDEX "member_schedules_member_id_location_id_day_of_week_start_time_e" RENAME TO "member_schedules_member_id_location_id_day_of_week_start_ti_key";

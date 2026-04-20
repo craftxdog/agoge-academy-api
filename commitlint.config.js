@@ -31,6 +31,9 @@ module.exports = {
       'always',
       [
         'auth',
+        'billing',
+        'rbac',
+        'settings',
         'users',
         'storage',
         'analytics',
