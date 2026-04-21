@@ -4,6 +4,21 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.3.2] - 2026-04-21
+
+### Added
+
+- Added an idempotent Prisma demo seed that provisions a complete organization with users, roles, branding, locations, schedules, payments, notifications and audit activity.
+- Added documentation for the demo tenant credentials and the recommended `db push` plus seed flow.
+
+### Changed
+
+- Extended the local Prisma workflow with dedicated `prisma:db:push` and `prisma:seed` scripts.
+
+### Fixed
+
+- Closed the initialization gap where `prisma db push` created the schema but not the global module, permission and screen catalog required by the API.
+
 ## [0.3.1] - 2026-04-21
 
 ### Added
