@@ -4,6 +4,23 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.2.0] - 2026-04-21
+
+### Added
+
+- Added a reusable storage module backed by Cloudinary for managed file uploads.
+- Added dedicated branding upload endpoints for organization logo and icon assets.
+- Added persisted Cloudinary asset keys to organization branding so replacements can clean up previous files safely.
+
+### Changed
+
+- Updated storage configuration and environment examples to standardize on the Cloudinary provider used by organization branding.
+
+### Fixed
+
+- Prevented invalid generated organization slugs during registration from creating inconsistent tenant records.
+- Hardened branding updates so removing or replacing assets does not leave orphaned Cloudinary files behind.
+
 ## [0.1.2] - 2026-04-19
 
 ### Fixed

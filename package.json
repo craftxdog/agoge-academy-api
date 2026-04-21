@@ -1,6 +1,6 @@
 {
   "name": "agoge-academy-api",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Backend API for Agoge Academy built with NestJS.",
   "author": "Agoge Academy Project",
   "private": false,
@@ -31,6 +31,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "cloudinary": "^2.7.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.1.19",
     "@nestjs/jwt": "^11.0.2",
