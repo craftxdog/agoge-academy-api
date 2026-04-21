@@ -4,6 +4,17 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.3.1] - 2026-04-21
+
+### Added
+
+- Added controller contract tests for analytics, audit, billing, RBAC, settings, schedules and users modules.
+- Added direct unit coverage for AuthService edge cases such as invalid slugs, refresh token requirements and membership selection.
+
+### Changed
+
+- Expanded the API validation workflow to include full unit test execution and e2e verification after adding the new test suite.
+
 ## [0.3.0] - 2026-04-21
 
 ### Added
