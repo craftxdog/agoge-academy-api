@@ -4,6 +4,19 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.3.0] - 2026-04-21
+
+### Added
+
+- Added a new `analytics` SaaS module with executive dashboard, revenue analytics, member growth analytics, operational analytics and filter catalog endpoints.
+- Added analytics DTOs, repository and service layer to transform tenant activity into business-facing KPIs and generated insights.
+- Registered the analytics module, permission and default screen in the tenant module catalog so current and future organizations can consume it consistently.
+
+### Changed
+
+- Expanded the RBAC module constants to include analytics access in the system permission catalog.
+- Wired the analytics module into the application bootstrap so it is available alongside the existing SaaS modules.
+
 ## [0.2.0] - 2026-04-21
 
 ### Added
