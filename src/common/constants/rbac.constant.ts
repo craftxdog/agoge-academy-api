@@ -11,6 +11,7 @@ export const SYSTEM_MODULES = {
   schedules: 'schedules',
   notifications: 'notifications',
   audit: 'audit',
+  analytics: 'analytics',
 } as const;
 
 export const SYSTEM_ROLES = {
@@ -31,6 +32,7 @@ export const SYSTEM_PERMISSIONS = {
   schedulesWrite: 'schedules.write',
   notificationsRead: 'notifications.read',
   auditRead: 'audit.read',
+  analyticsRead: 'analytics.read',
 } as const;
 
 export type SystemModule = (typeof SYSTEM_MODULES)[keyof typeof SYSTEM_MODULES];

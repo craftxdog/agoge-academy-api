@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './database/prisma.module';
+import { AnalyticsModule } from './modules/analytics';
 import { AuditModule } from './modules/audit';
 import { AuthModule } from './modules/auth';
 import { BillingModule } from './modules/billing';
@@ -13,6 +14,7 @@ import { UsersModule } from './modules/users';
 @Module({
   imports: [
     PrismaModule,
+    AnalyticsModule,
     AuditModule,
     AuthModule,
     RbacModule,
