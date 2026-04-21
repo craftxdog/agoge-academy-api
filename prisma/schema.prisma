@@ -139,7 +139,9 @@ model OrganizationBranding {
   organizationId String @unique @map("organization_id") @db.Uuid
 
   logoUrl        String? @map("logo_url")
+  logoKey        String? @map("logo_key")
   iconUrl        String? @map("icon_url")
+  iconKey        String? @map("icon_key")
   primaryColor   String? @map("primary_color") @db.VarChar(20)
   secondaryColor String? @map("secondary_color") @db.VarChar(20)
   accentColor    String? @map("accent_color") @db.VarChar(20)

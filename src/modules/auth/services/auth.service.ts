@@ -39,6 +39,10 @@ export class AuthService {
     const username = dto.username?.toLowerCase();
     const slug = this.slugify(dto.organizationSlug ?? dto.organizationName);
 
+    if (!slug) {
+      throw new BadRequestException('Organization slug is invalid');
+    }
+
     if (await this.authRepository.emailExists(email)) {
       throw new ConflictException('Email is already registered');
     }

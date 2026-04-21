@@ -68,12 +68,16 @@ describe('SettingsService', () => {
     updateScreen: jest.fn(),
     deleteScreen: jest.fn(),
   };
+  const storageService = {
+    upload: jest.fn(),
+    delete: jest.fn(),
+  };
   let service: SettingsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     repository.findOrganization.mockResolvedValue(organization);
-    service = new SettingsService(repository as never);
+    service = new SettingsService(repository as never, storageService as never);
   });
 
   it('throws when organization is missing', async () => {
@@ -127,5 +131,53 @@ describe('SettingsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(repository.deleteScreen).not.toHaveBeenCalled();
+  });
+
+  it('clears stored asset key when logo url is removed manually', async () => {
+    repository.findOrganization.mockResolvedValue({
+      ...organization,
+      branding: {
+        id: 'branding-id',
+        organizationId: 'organization-id',
+        logoUrl: 'https://res.cloudinary.com/demo/image/upload/v1/agoge/logo.png',
+        logoKey: 'agoge/organizations/organization-id/branding/logo',
+        iconUrl: null,
+        iconKey: null,
+        primaryColor: null,
+        secondaryColor: null,
+        accentColor: null,
+        theme: null,
+        createdAt: new Date('2026-04-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-20T00:00:00.000Z'),
+      },
+    });
+    repository.upsertBranding.mockResolvedValue({
+      id: 'branding-id',
+      organizationId: 'organization-id',
+      logoUrl: null,
+      logoKey: null,
+      iconUrl: null,
+      iconKey: null,
+      primaryColor: null,
+      secondaryColor: null,
+      accentColor: null,
+      theme: null,
+      createdAt: new Date('2026-04-20T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-20T00:00:00.000Z'),
+    });
+
+    await service.updateBranding('organization-id', { logoUrl: null });
+
+    expect(repository.upsertBranding).toHaveBeenCalledWith('organization-id', {
+      primaryColor: undefined,
+      secondaryColor: undefined,
+      accentColor: undefined,
+      theme: undefined,
+      logoUrl: null,
+      logoKey: null,
+    });
+    expect(storageService.delete).toHaveBeenCalledWith(
+      'agoge/organizations/organization-id/branding/logo',
+    );
   });
 });

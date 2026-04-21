@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ScreenType } from 'generated/prisma/enums';
 import { SYSTEM_MODULES } from '../../../common';
+import { StorageFile, StorageService } from '../../storage';
 import {
   CreateOrganizationScreenDto,
   OrganizationBrandingResponseDto,
@@ -30,9 +31,14 @@ import {
   SettingsValueRecord,
 } from '../repositories/settings.repository';
 
+type BrandingAssetField = 'logo' | 'icon';
+
 @Injectable()
 export class SettingsService {
-  constructor(private readonly settingsRepository: SettingsRepository) {}
+  constructor(
+    private readonly settingsRepository: SettingsRepository,
+    private readonly storageService: StorageService,
+  ) {}
 
   async getOrganizationProfile(
     organizationId: string,
@@ -67,20 +73,56 @@ export class SettingsService {
     organizationId: string,
     dto: UpdateOrganizationBrandingDto,
   ): Promise<OrganizationBrandingResponseDto> {
-    await this.getOrganizationOrThrow(organizationId);
+    const organization = await this.getOrganizationOrThrow(organizationId);
+    const normalizedBranding = this.normalizeBrandingPayload(dto);
+    const keysToDelete = this.resolveBrandingKeysToDelete(
+      organization.branding,
+      normalizedBranding,
+    );
     const branding = await this.settingsRepository.upsertBranding(
       organizationId,
-      {
-        ...dto,
-        logoUrl: dto.logoUrl?.trim(),
-        iconUrl: dto.iconUrl?.trim(),
-        primaryColor: dto.primaryColor?.trim(),
-        secondaryColor: dto.secondaryColor?.trim(),
-        accentColor: dto.accentColor?.trim(),
-      },
+      normalizedBranding,
     );
 
+    await this.deleteBrandingAssets(keysToDelete);
+
     return this.mapBranding(branding);
+  }
+
+  async uploadBrandingAsset(
+    organizationId: string,
+    field: BrandingAssetField,
+    file: StorageFile | undefined,
+  ): Promise<OrganizationBrandingResponseDto> {
+    const organization = await this.getOrganizationOrThrow(organizationId);
+    const folder = `organizations/${organizationId}/branding`;
+    const upload = await this.storageService.upload(file, folder);
+    const currentKey =
+      field === 'logo'
+        ? organization.branding?.logoKey
+        : organization.branding?.iconKey;
+
+    try {
+      const branding = await this.settingsRepository.upsertBranding(
+        organizationId,
+        field === 'logo'
+          ? {
+              logoUrl: upload.url,
+              logoKey: upload.key,
+            }
+          : {
+              iconUrl: upload.url,
+              iconKey: upload.key,
+            },
+      );
+
+      await this.deleteBrandingAssets(currentKey ? [currentKey] : []);
+
+      return this.mapBranding(branding);
+    } catch (error) {
+      await this.storageService.delete(upload.key);
+      throw error;
+    }
   }
 
   async listSettings(
@@ -371,6 +413,88 @@ export class SettingsService {
       accentColor: branding.accentColor,
       theme: branding.theme,
     };
+  }
+
+  private normalizeBrandingPayload(dto: UpdateOrganizationBrandingDto): {
+    logoUrl?: string | null;
+    logoKey?: string | null;
+    iconUrl?: string | null;
+    iconKey?: string | null;
+    primaryColor?: string;
+    secondaryColor?: string;
+    accentColor?: string;
+    theme?: Record<string, unknown>;
+  } {
+    const normalized: {
+      logoUrl?: string | null;
+      logoKey?: string | null;
+      iconUrl?: string | null;
+      iconKey?: string | null;
+      primaryColor?: string;
+      secondaryColor?: string;
+      accentColor?: string;
+      theme?: Record<string, unknown>;
+    } = {
+      primaryColor: dto.primaryColor?.trim(),
+      secondaryColor: dto.secondaryColor?.trim(),
+      accentColor: dto.accentColor?.trim(),
+      theme: dto.theme,
+    };
+
+    if (Object.prototype.hasOwnProperty.call(dto, 'logoUrl')) {
+      normalized.logoUrl = this.normalizeOptionalString(dto.logoUrl);
+      normalized.logoKey = normalized.logoUrl ? undefined : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(dto, 'iconUrl')) {
+      normalized.iconUrl = this.normalizeOptionalString(dto.iconUrl);
+      normalized.iconKey = normalized.iconUrl ? undefined : null;
+    }
+
+    return normalized;
+  }
+
+  private resolveBrandingKeysToDelete(
+    currentBranding: SettingsBrandingRecord | null | undefined,
+    nextBranding: {
+      logoUrl?: string | null;
+      iconUrl?: string | null;
+    },
+  ): string[] {
+    const keysToDelete: string[] = [];
+
+    if (
+      Object.prototype.hasOwnProperty.call(nextBranding, 'logoUrl') &&
+      currentBranding?.logoKey &&
+      nextBranding.logoUrl !== currentBranding.logoUrl
+    ) {
+      keysToDelete.push(currentBranding.logoKey);
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(nextBranding, 'iconUrl') &&
+      currentBranding?.iconKey &&
+      nextBranding.iconUrl !== currentBranding.iconUrl
+    ) {
+      keysToDelete.push(currentBranding.iconKey);
+    }
+
+    return keysToDelete;
+  }
+
+  private async deleteBrandingAssets(keys: string[]): Promise<void> {
+    if (keys.length === 0) {
+      return;
+    }
+
+    await Promise.allSettled(
+      keys.map((key) => this.storageService.delete(key)),
+    );
+  }
+
+  private normalizeOptionalString(value?: string | null): string | null {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
   }
 
   private mapSetting(

@@ -14,13 +14,13 @@ export class UpdateOrganizationBrandingDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  logoUrl?: string;
+  logoUrl?: string | null;
 
   @ApiPropertyOptional({ example: 'https://cdn.agoge.com/icon.png' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  iconUrl?: string;
+  iconUrl?: string | null;
 
   @ApiPropertyOptional({ example: '#0F766E' })
   @IsOptional()

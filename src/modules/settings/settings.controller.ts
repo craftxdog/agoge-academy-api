@@ -11,15 +11,20 @@ import {
   Put,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   CurrentOrganization,
   JwtAuthGuard,
@@ -31,6 +36,7 @@ import {
   SYSTEM_PERMISSIONS,
   TenantGuard,
 } from '../../common';
+import { StorageFile } from '../storage';
 import {
   CreateOrganizationScreenDto,
   OrganizationBrandingResponseDto,
@@ -95,6 +101,66 @@ export class SettingsController {
     @Body() dto: UpdateOrganizationBrandingDto,
   ) {
     return this.settingsService.updateBranding(organizationId, dto);
+  }
+
+  @Post('branding/logo')
+  @Permissions(SYSTEM_PERMISSIONS.settingsWrite)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload organization logo',
+    description:
+      'Uploads the tenant logo to Cloudinary and updates branding with the resulting asset URL.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiCreatedResponse({ type: OrganizationBrandingResponseDto })
+  uploadBrandingLogo(
+    @CurrentOrganization('id') organizationId: string,
+    @UploadedFile() file: StorageFile,
+  ) {
+    return this.settingsService.uploadBrandingAsset(
+      organizationId,
+      'logo',
+      file,
+    );
+  }
+
+  @Post('branding/icon')
+  @Permissions(SYSTEM_PERMISSIONS.settingsWrite)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: 'Upload organization icon',
+    description:
+      'Uploads the tenant icon to Cloudinary and updates branding with the resulting asset URL.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiCreatedResponse({ type: OrganizationBrandingResponseDto })
+  uploadBrandingIcon(
+    @CurrentOrganization('id') organizationId: string,
+    @UploadedFile() file: StorageFile,
+  ) {
+    return this.settingsService.uploadBrandingAsset(
+      organizationId,
+      'icon',
+      file,
+    );
   }
 
   @Get('preferences')

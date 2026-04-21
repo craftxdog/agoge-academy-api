@@ -7,12 +7,13 @@ import {
   TenantGuard,
 } from '../../common';
 import { PrismaModule } from '../../database/prisma.module';
+import { StorageModule } from '../storage';
 import { SettingsRepository } from './repositories/settings.repository';
 import { SettingsController } from './settings.controller';
 import { SettingsService } from './services/settings.service';
 
 @Module({
-  imports: [PrismaModule, JwtModule.register({})],
+  imports: [PrismaModule, JwtModule.register({}), StorageModule],
   controllers: [SettingsController],
   providers: [
     SettingsRepository,

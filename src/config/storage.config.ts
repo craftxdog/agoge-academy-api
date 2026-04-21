@@ -1,44 +1,52 @@
-export type StorageProvider = 'local' | 's3';
+export type StorageProvider = 'cloudinary';
 
 export type StorageConfig = {
   provider: StorageProvider;
   maxFileSizeBytes: number;
   allowedMimeTypes: string[];
-  local: {
-    path: string;
-  };
-  s3: {
-    region?: string;
-    accessKeyId?: string;
-    secretAccessKey?: string;
-    bucket?: string;
+  cloudinary: {
+    cloudName?: string;
+    apiKey?: string;
+    apiSecret?: string;
+    folder: string;
   };
 };
 
 const DEFAULT_MAX_FILE_SIZE_MB = 10;
+const DEFAULT_STORAGE_FOLDER = 'agoge';
+
+const resolveMaxFileSizeBytes = (): number => {
+  const sizeInMb = Number.parseInt(
+    process.env.MAX_FILE_SIZE_MB ?? String(DEFAULT_MAX_FILE_SIZE_MB),
+    10,
+  );
+
+  const safeSizeInMb =
+    Number.isFinite(sizeInMb) && sizeInMb > 0
+      ? sizeInMb
+      : DEFAULT_MAX_FILE_SIZE_MB;
+
+  return safeSizeInMb * 1024 * 1024;
+};
 
 const resolveStorageProvider = (): StorageProvider =>
-  process.env.STORAGE_PROVIDER === 's3' ? 's3' : 'local';
+  process.env.STORAGE_PROVIDER?.trim().toLowerCase() === 'cloudinary'
+    ? 'cloudinary'
+    : 'cloudinary';
 
 export const getStorageConfig = (): StorageConfig => ({
   provider: resolveStorageProvider(),
-  maxFileSizeBytes:
-    Number(process.env.MAX_FILE_SIZE_MB ?? DEFAULT_MAX_FILE_SIZE_MB) *
-    1024 *
-    1024,
+  maxFileSizeBytes: resolveMaxFileSizeBytes(),
   allowedMimeTypes: [
     'image/jpeg',
     'image/png',
     'image/webp',
     'application/pdf',
   ],
-  local: {
-    path: process.env.LOCAL_STORAGE_PATH ?? './uploads',
-  },
-  s3: {
-    region: process.env.AWS_REGION,
-    accessKeyId: process.env.AWS_S3_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_S3_KEY,
-    bucket: process.env.AWS_S3_BUCKET,
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKey: process.env.CLOUDINARY_API_KEY,
+    apiSecret: process.env.CLOUDINARY_API_SECRET,
+    folder: process.env.CLOUDINARY_FOLDER?.trim() || DEFAULT_STORAGE_FOLDER,
   },
 });

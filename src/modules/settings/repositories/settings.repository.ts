@@ -38,6 +38,17 @@ export type SettingsScreenRecord = Prisma.OrganizationScreenGetPayload<{
   include: typeof organizationScreenInclude;
 }>;
 
+type UpdateOrganizationBrandingInput = {
+  logoUrl?: string | null;
+  logoKey?: string | null;
+  iconUrl?: string | null;
+  iconKey?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  accentColor?: string | null;
+  theme?: Prisma.InputJsonValue | undefined;
+};
+
 @Injectable()
 export class SettingsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -71,11 +82,16 @@ export class SettingsRepository {
 
   upsertBranding(
     organizationId: string,
-    dto: UpdateOrganizationBrandingDto,
+    dto: UpdateOrganizationBrandingDto & {
+      logoKey?: string | null;
+      iconKey?: string | null;
+    },
   ): Promise<SettingsBrandingRecord> {
-    const data = {
+    const data: UpdateOrganizationBrandingInput = {
       logoUrl: dto.logoUrl,
+      logoKey: dto.logoKey,
       iconUrl: dto.iconUrl,
+      iconKey: dto.iconKey,
       primaryColor: dto.primaryColor,
       secondaryColor: dto.secondaryColor,
       accentColor: dto.accentColor,
