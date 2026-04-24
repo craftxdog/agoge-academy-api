@@ -73,7 +73,9 @@ describe('SettingsController', () => {
 
   it('delegates preference and module requests', async () => {
     const query = { namespace: 'billing' };
-    const dto = { settings: [{ namespace: 'billing', key: 'currency', value: 'USD' }] };
+    const dto = {
+      settings: [{ namespace: 'billing', key: 'currency', value: 'USD' }],
+    };
     const response = [{ id: 'setting-id' }];
     settingsService.listSettings.mockResolvedValue(response);
     settingsService.upsertSettings.mockResolvedValue(response);
@@ -90,11 +92,9 @@ describe('SettingsController', () => {
       response,
     );
     await expect(
-      controller.updateModule(
-        'organization-id',
-        'billing',
-        { isEnabled: true } as never,
-      ),
+      controller.updateModule('organization-id', 'billing', {
+        isEnabled: true,
+      } as never),
     ).resolves.toEqual({ id: 'module-id' });
   });
 
@@ -109,17 +109,16 @@ describe('SettingsController', () => {
       response,
     ]);
     await expect(
-      controller.createScreen(
-        'organization-id',
-        { key: 'custom.reports', title: 'Reports', type: 'CUSTOM_PAGE' } as never,
-      ),
+      controller.createScreen('organization-id', {
+        key: 'custom.reports',
+        title: 'Reports',
+        type: 'CUSTOM_PAGE',
+      } as never),
     ).resolves.toBe(response);
     await expect(
-      controller.updateScreen(
-        'organization-id',
-        'screen-id',
-        { title: 'Updated' } as never,
-      ),
+      controller.updateScreen('organization-id', 'screen-id', {
+        title: 'Updated',
+      } as never),
     ).resolves.toBe(response);
     await expect(
       controller.deleteScreen('organization-id', 'screen-id'),

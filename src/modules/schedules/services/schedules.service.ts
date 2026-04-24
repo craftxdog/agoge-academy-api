@@ -661,7 +661,9 @@ export class SchedulesService {
       })),
     });
 
-    const response = schedules.map((schedule) => this.mapMemberSchedule(schedule));
+    const response = schedules.map((schedule) =>
+      this.mapMemberSchedule(schedule),
+    );
 
     this.emitSchedulesEvent({
       organizationId,

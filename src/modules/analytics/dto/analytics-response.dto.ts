@@ -219,7 +219,8 @@ export class AnalyticsInsightResponseDto {
   title: string;
 
   @ApiProperty({
-    example: 'There are overdue invoices that should be collected soon to protect cash flow.',
+    example:
+      'There are overdue invoices that should be collected soon to protect cash flow.',
   })
   message: string;
 }

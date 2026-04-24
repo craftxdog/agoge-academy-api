@@ -356,20 +356,22 @@ export class AnalyticsRepository {
   }
 
   findEnabledModules(organizationId: string): Promise<Array<{ key: string }>> {
-    return this.prisma.organizationModule.findMany({
-      where: {
-        organizationId,
-        isEnabled: true,
-      },
-      select: {
-        module: {
-          select: {
-            key: true,
+    return this.prisma.organizationModule
+      .findMany({
+        where: {
+          organizationId,
+          isEnabled: true,
+        },
+        select: {
+          module: {
+            select: {
+              key: true,
+            },
           },
         },
-      },
-      orderBy: [{ sortOrder: 'asc' }, { module: { key: 'asc' } }],
-    }).then((records) => records.map((record) => ({ key: record.module.key })));
+        orderBy: [{ sortOrder: 'asc' }, { module: { key: 'asc' } }],
+      })
+      .then((records) => records.map((record) => ({ key: record.module.key })));
   }
 
   findPaymentTypesCatalog(
@@ -406,23 +408,27 @@ export class AnalyticsRepository {
     });
   }
 
-  findLocationsCatalog(organizationId: string): Promise<AnalyticsCatalogRecord[]> {
-    return this.prisma.location.findMany({
-      where: {
-        organizationId,
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: locationCatalogOrderBy,
-    }).then((locations) =>
-      locations.map((location) => ({
-        id: location.id,
-        key: location.id,
-        name: location.name,
-      })),
-    );
+  findLocationsCatalog(
+    organizationId: string,
+  ): Promise<AnalyticsCatalogRecord[]> {
+    return this.prisma.location
+      .findMany({
+        where: {
+          organizationId,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+        orderBy: locationCatalogOrderBy,
+      })
+      .then((locations) =>
+        locations.map((location) => ({
+          id: location.id,
+          key: location.id,
+          name: location.name,
+        })),
+      );
   }
 
   async findCurrenciesCatalog(organizationId: string): Promise<string[]> {

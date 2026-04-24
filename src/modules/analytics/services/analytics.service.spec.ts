@@ -1,5 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
-import { InvitationStatus, MemberStatus, PaymentStatus, PaymentTransactionStatus } from 'generated/prisma/enums';
+import {
+  InvitationStatus,
+  MemberStatus,
+  PaymentStatus,
+  PaymentTransactionStatus,
+} from 'generated/prisma/enums';
 import { AnalyticsService } from './analytics.service';
 
 const decimal = (value: number) =>
@@ -47,7 +52,9 @@ describe('AnalyticsService', () => {
         createdAt: new Date('2026-04-10T12:00:00.000Z'),
         dueDate: new Date('2026-04-15T12:00:00.000Z'),
         paymentType: { id: 'type-1', key: 'membership', name: 'Membership' },
-        transactions: [{ amount: decimal(200), status: PaymentTransactionStatus.SUCCEEDED }],
+        transactions: [
+          { amount: decimal(200), status: PaymentTransactionStatus.SUCCEEDED },
+        ],
       },
     ]);
     repository.findOpenPaymentsUntil.mockResolvedValue([
@@ -58,7 +65,9 @@ describe('AnalyticsService', () => {
         createdAt: new Date('2026-04-10T12:00:00.000Z'),
         dueDate: new Date('2026-04-15T12:00:00.000Z'),
         paymentType: { id: 'type-1', key: 'membership', name: 'Membership' },
-        transactions: [{ amount: decimal(200), status: PaymentTransactionStatus.SUCCEEDED }],
+        transactions: [
+          { amount: decimal(200), status: PaymentTransactionStatus.SUCCEEDED },
+        ],
       },
     ]);
     repository.findTransactionsProcessedBetween.mockResolvedValue([
@@ -139,8 +148,12 @@ describe('AnalyticsService', () => {
       'users',
       'analytics',
     ]);
-    expect(result.insights.some((item) => item.metricKey === 'overdueAmount')).toBe(true);
-    expect(result.insights.some((item) => item.metricKey === 'unreadNotifications')).toBe(true);
+    expect(
+      result.insights.some((item) => item.metricKey === 'overdueAmount'),
+    ).toBe(true);
+    expect(
+      result.insights.some((item) => item.metricKey === 'unreadNotifications'),
+    ).toBe(true);
   });
 
   it('rejects inverted date ranges', async () => {

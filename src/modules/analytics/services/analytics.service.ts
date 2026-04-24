@@ -74,7 +74,10 @@ export class AnalyticsService {
           range.start,
           range.end,
         ),
-        this.analyticsRepository.findOpenPaymentsUntil(organizationId, range.end),
+        this.analyticsRepository.findOpenPaymentsUntil(
+          organizationId,
+          range.end,
+        ),
         this.analyticsRepository.findTransactionsProcessedBetween(
           organizationId,
           range.start,
@@ -84,7 +87,8 @@ export class AnalyticsService {
 
     const invoicedAmount = this.sumPaymentAmounts(paymentsCreatedInRange);
     const collectedTransactions = transactionsInRange.filter(
-      (transaction) => transaction.status === PaymentTransactionStatus.SUCCEEDED,
+      (transaction) =>
+        transaction.status === PaymentTransactionStatus.SUCCEEDED,
     );
     const collectedAmount = this.sumTransactionAmounts(collectedTransactions);
     const outstandingAmount = this.sumOutstandingBalances(openPaymentsUntilEnd);
@@ -128,15 +132,17 @@ export class AnalyticsService {
     query: AnalyticsQueryDto,
   ): Promise<AnalyticsMemberResponseDto> {
     const range = this.resolveRange(query);
-    const [members, invitationsInRange, pendingInvitations] = await Promise.all([
-      this.analyticsRepository.findMembers(organizationId),
-      this.analyticsRepository.findInvitationsCreatedBetween(
-        organizationId,
-        range.start,
-        range.end,
-      ),
-      this.analyticsRepository.countPendingInvitations(organizationId),
-    ]);
+    const [members, invitationsInRange, pendingInvitations] = await Promise.all(
+      [
+        this.analyticsRepository.findMembers(organizationId),
+        this.analyticsRepository.findInvitationsCreatedBetween(
+          organizationId,
+          range.start,
+          range.end,
+        ),
+        this.analyticsRepository.countPendingInvitations(organizationId),
+      ],
+    );
 
     const activeMembers = members.filter(
       (member) =>
@@ -261,14 +267,19 @@ export class AnalyticsService {
   async getCatalog(
     organizationId: string,
   ): Promise<AnalyticsCatalogResponseDto> {
-    const [paymentTypes, paymentMethods, locations, currencies, enabledModules] =
-      await Promise.all([
-        this.analyticsRepository.findPaymentTypesCatalog(organizationId),
-        this.analyticsRepository.findPaymentMethodsCatalog(organizationId),
-        this.analyticsRepository.findLocationsCatalog(organizationId),
-        this.analyticsRepository.findCurrenciesCatalog(organizationId),
-        this.analyticsRepository.findEnabledModules(organizationId),
-      ]);
+    const [
+      paymentTypes,
+      paymentMethods,
+      locations,
+      currencies,
+      enabledModules,
+    ] = await Promise.all([
+      this.analyticsRepository.findPaymentTypesCatalog(organizationId),
+      this.analyticsRepository.findPaymentMethodsCatalog(organizationId),
+      this.analyticsRepository.findLocationsCatalog(organizationId),
+      this.analyticsRepository.findCurrenciesCatalog(organizationId),
+      this.analyticsRepository.findEnabledModules(organizationId),
+    ]);
 
     return {
       paymentTypes: paymentTypes.map((item) => ({
@@ -397,9 +408,10 @@ export class AnalyticsService {
 
     if (revenue.overdue.amount > 0) {
       insights.push({
-        severity: revenue.overdue.amount >= revenue.collected.amount
-          ? 'critical'
-          : 'warning',
+        severity:
+          revenue.overdue.amount >= revenue.collected.amount
+            ? 'critical'
+            : 'warning',
         metricKey: 'overdueAmount',
         title: 'Overdue balance needs attention',
         message:
@@ -473,7 +485,9 @@ export class AnalyticsService {
     }
 
     return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .sort(
+        (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+      )
       .map(([key, count]) => ({
         key,
         label: this.humanizeKey(key),
@@ -539,7 +553,9 @@ export class AnalyticsService {
     return [...summary.values()]
       .sort(
         (left, right) =>
-          right.amount - left.amount || right.count - left.count || left.key.localeCompare(right.key),
+          right.amount - left.amount ||
+          right.count - left.count ||
+          left.key.localeCompare(right.key),
       )
       .slice(0, top)
       .map((item) => ({
@@ -576,7 +592,9 @@ export class AnalyticsService {
     return [...summary.values()]
       .sort(
         (left, right) =>
-          right.amount - left.amount || right.count - left.count || left.key.localeCompare(right.key),
+          right.amount - left.amount ||
+          right.count - left.count ||
+          left.key.localeCompare(right.key),
       )
       .slice(0, top)
       .map((item) => ({
@@ -596,7 +614,9 @@ export class AnalyticsService {
     }
 
     return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .sort(
+        (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+      )
       .slice(0, top)
       .map(([key, count]) => ({
         key,
@@ -664,7 +684,9 @@ export class AnalyticsService {
     return [...buckets.values()];
   }
 
-  private createBuckets(range: AnalyticsRange): Map<string, AnalyticsTrendPointDto> {
+  private createBuckets(
+    range: AnalyticsRange,
+  ): Map<string, AnalyticsTrendPointDto> {
     const buckets = new Map<string, AnalyticsTrendPointDto>();
     let cursor = this.startOfBucket(range.start, range.groupBy);
 
@@ -738,7 +760,9 @@ export class AnalyticsService {
     );
   }
 
-  private sumTransactionAmounts(transactions: AnalyticsTransactionRecord[]): number {
+  private sumTransactionAmounts(
+    transactions: AnalyticsTransactionRecord[],
+  ): number {
     return transactions.reduce(
       (total, transaction) => total + this.decimalToNumber(transaction.amount),
       0,
@@ -746,14 +770,21 @@ export class AnalyticsService {
   }
 
   private sumOutstandingBalances(payments: AnalyticsPaymentRecord[]): number {
-    return payments.reduce((total, payment) => total + this.getOutstandingBalance(payment), 0);
+    return payments.reduce(
+      (total, payment) => total + this.getOutstandingBalance(payment),
+      0,
+    );
   }
 
   private getOutstandingBalance(payment: AnalyticsPaymentRecord): number {
     const paidAmount = payment.transactions
-      .filter((transaction) => transaction.status === PaymentTransactionStatus.SUCCEEDED)
+      .filter(
+        (transaction) =>
+          transaction.status === PaymentTransactionStatus.SUCCEEDED,
+      )
       .reduce(
-        (total, transaction) => total + this.decimalToNumber(transaction.amount),
+        (total, transaction) =>
+          total + this.decimalToNumber(transaction.amount),
         0,
       );
 
@@ -767,7 +798,10 @@ export class AnalyticsService {
     return paymentCurrencies[0] ?? transactionCurrencies[0] ?? 'USD';
   }
 
-  private toMoneyMetric(amount: number, currency: string): AnalyticsMoneyMetricDto {
+  private toMoneyMetric(
+    amount: number,
+    currency: string,
+  ): AnalyticsMoneyMetricDto {
     return {
       amount: this.roundToTwo(amount),
       currency,

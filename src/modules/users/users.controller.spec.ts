@@ -22,7 +22,11 @@ describe('UsersController', () => {
 
   it('delegates member requests', async () => {
     const response = { id: 'member-id' };
-    const dto = { email: 'coach@agoge.com', firstName: 'Alex', lastName: 'Coach' };
+    const dto = {
+      email: 'coach@agoge.com',
+      firstName: 'Alex',
+      lastName: 'Coach',
+    };
     usersService.listMembers.mockResolvedValue({ items: [response] });
     usersService.createMember.mockResolvedValue(response);
     usersService.getMember.mockResolvedValue(response);
@@ -36,9 +40,9 @@ describe('UsersController', () => {
     await expect(
       controller.createMember('organization-id', dto as never),
     ).resolves.toBe(response);
-    await expect(controller.getMember('organization-id', 'member-id')).resolves.toBe(
-      response,
-    );
+    await expect(
+      controller.getMember('organization-id', 'member-id'),
+    ).resolves.toBe(response);
     await expect(
       controller.updateMember('organization-id', 'member-id', dto as never),
     ).resolves.toBe(response);
@@ -51,7 +55,11 @@ describe('UsersController', () => {
       ),
     ).resolves.toBe(response);
     await expect(
-      controller.removeMember('organization-id', 'current-member-id', 'member-id'),
+      controller.removeMember(
+        'organization-id',
+        'current-member-id',
+        'member-id',
+      ),
     ).resolves.toBe(response);
   });
 
@@ -66,11 +74,9 @@ describe('UsersController', () => {
       controller.listInvitations('organization-id', {} as never),
     ).resolves.toEqual({ items: [response] });
     await expect(
-      controller.createInvitation(
-        'organization-id',
-        'member-id',
-        { email: 'coach@agoge.com' } as never,
-      ),
+      controller.createInvitation('organization-id', 'member-id', {
+        email: 'coach@agoge.com',
+      } as never),
     ).resolves.toBe(response);
     await expect(
       controller.acceptInvitation({ token: 'some-valid-token-12345' } as never),

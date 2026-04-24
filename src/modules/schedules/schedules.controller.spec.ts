@@ -49,7 +49,11 @@ describe('SchedulesController', () => {
       controller.createLocation('organization-id', locationDto as never),
     ).resolves.toBe(response);
     await expect(
-      controller.updateLocation('organization-id', 'location-id', locationDto as never),
+      controller.updateLocation(
+        'organization-id',
+        'location-id',
+        locationDto as never,
+      ),
     ).resolves.toBe(response);
     await expect(
       controller.deleteLocation('organization-id', 'location-id'),
@@ -72,17 +76,14 @@ describe('SchedulesController', () => {
       controller.createBusinessHour('organization-id', dto as never),
     ).resolves.toBe(response);
     await expect(
-      controller.replaceBusinessHours(
-        'organization-id',
-        { hours: [dto] } as never,
-      ),
+      controller.replaceBusinessHours('organization-id', {
+        hours: [dto],
+      } as never),
     ).resolves.toEqual([response]);
     await expect(
-      controller.updateBusinessHour(
-        'organization-id',
-        'business-hour-id',
-        { endTime: '18:00' } as never,
-      ),
+      controller.updateBusinessHour('organization-id', 'business-hour-id', {
+        endTime: '18:00',
+      } as never),
     ).resolves.toBe(response);
     await expect(
       controller.deleteBusinessHour('organization-id', 'business-hour-id'),
@@ -104,11 +105,9 @@ describe('SchedulesController', () => {
       controller.createException('organization-id', dto as never),
     ).resolves.toBe(response);
     await expect(
-      controller.updateException(
-        'organization-id',
-        'exception-id',
-        { name: 'Holiday' } as never,
-      ),
+      controller.updateException('organization-id', 'exception-id', {
+        name: 'Holiday',
+      } as never),
     ).resolves.toBe(response);
     await expect(
       controller.deleteException('organization-id', 'exception-id'),
@@ -131,27 +130,21 @@ describe('SchedulesController', () => {
       ),
     ).resolves.toEqual([response]);
     await expect(
-      controller.createMemberSchedule(
-        'organization-id',
-        'member-id',
-        { dayOfWeek: 1, startTime: '08:00', endTime: '10:00' } as never,
-      ),
+      controller.createMemberSchedule('organization-id', 'member-id', {
+        dayOfWeek: 1,
+        startTime: '08:00',
+        endTime: '10:00',
+      } as never),
     ).resolves.toBe(response);
     await expect(
-      controller.replaceMemberSchedules(
-        'organization-id',
-        'member-id',
-        {
-          schedules: [{ dayOfWeek: 1, startTime: '08:00', endTime: '10:00' }],
-        } as never,
-      ),
+      controller.replaceMemberSchedules('organization-id', 'member-id', {
+        schedules: [{ dayOfWeek: 1, startTime: '08:00', endTime: '10:00' }],
+      } as never),
     ).resolves.toEqual([response]);
     await expect(
-      controller.updateMemberSchedule(
-        'organization-id',
-        'schedule-id',
-        { endTime: '11:00' } as never,
-      ),
+      controller.updateMemberSchedule('organization-id', 'schedule-id', {
+        endTime: '11:00',
+      } as never),
     ).resolves.toBe(response);
     await expect(
       controller.deleteMemberSchedule('organization-id', 'schedule-id'),
