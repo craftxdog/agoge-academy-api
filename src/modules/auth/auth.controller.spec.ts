@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtModule } from '@nestjs/jwt';
 import { Response } from 'express';
-import { REFRESH_COOKIE } from '../../common';
+import { JwtAuthGuard, REFRESH_COOKIE } from '../../common';
+import { PrismaService } from '../../database/prisma.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './services/auth.service';
 import { AuthSession } from './types';
@@ -46,7 +47,21 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [JwtModule.register({})],
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: authService }],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        {
+          provide: JwtAuthGuard,
+          useValue: { canActivate: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            organizationMember: {
+              findFirst: jest.fn(),
+            },
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);

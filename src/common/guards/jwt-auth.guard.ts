@@ -7,16 +7,22 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { PlatformRole } from 'generated/prisma/enums';
+import { PrismaService } from '../../database/prisma.service';
 import { getJwtConfig } from '../../config/jwt.config';
 import { IS_PUBLIC_KEY } from '../constants';
 import { JwtAccessPayload, TenantRequest } from '../interfaces';
-import { extractBearerToken } from '../utils';
+import {
+  extractBearerToken,
+  LiveAccessContext,
+  resolveLiveAccessContext,
+} from '../utils';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -32,7 +38,22 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const payload = await this.verifyToken(token);
-    this.attachRequestContext(request, payload);
+    const liveAccessContext = await resolveLiveAccessContext(
+      this.prisma,
+      payload,
+    );
+
+    if (
+      payload.memberId &&
+      payload.organizationId &&
+      !liveAccessContext.member
+    ) {
+      throw new UnauthorizedException(
+        'Organization membership is no longer active',
+      );
+    }
+
+    this.attachRequestContext(request, payload, liveAccessContext);
 
     return true;
   }
@@ -59,6 +80,7 @@ export class JwtAuthGuard implements CanActivate {
   protected attachRequestContext(
     request: TenantRequest,
     payload: JwtAccessPayload,
+    liveAccessContext: LiveAccessContext,
   ): void {
     request.user = {
       id: payload.sub,
@@ -69,22 +91,34 @@ export class JwtAuthGuard implements CanActivate {
       platformRole: payload.platformRole ?? PlatformRole.USER,
     };
 
-    if (payload.organizationId || payload.organizationSlug) {
-      request.organization = {
-        id: payload.organizationId ?? '',
-        slug: payload.organizationSlug ?? '',
-      };
+    const organization =
+      liveAccessContext.organization ??
+      (payload.organizationId || payload.organizationSlug
+        ? {
+            id: payload.organizationId ?? '',
+            slug: payload.organizationSlug ?? '',
+          }
+        : undefined);
+
+    if (organization) {
+      request.organization = organization;
     }
 
-    if (payload.memberId && payload.organizationId) {
-      request.member = {
-        id: payload.memberId,
-        organizationId: payload.organizationId,
-        userId: payload.sub,
-        roles: payload.roles ?? [],
-        permissions: payload.permissions ?? [],
-        enabledModules: payload.enabledModules ?? [],
-      };
+    const member =
+      liveAccessContext.member ??
+      (payload.memberId && payload.organizationId
+        ? {
+            id: payload.memberId,
+            organizationId: payload.organizationId,
+            userId: payload.sub,
+            roles: payload.roles ?? [],
+            permissions: payload.permissions ?? [],
+            enabledModules: payload.enabledModules ?? [],
+          }
+        : undefined);
+
+    if (member) {
+      request.member = member;
     }
   }
 

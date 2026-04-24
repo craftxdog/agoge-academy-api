@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { getStorageConfig } from '../../config';
 import { CloudinaryStorageProvider } from './providers/cloudinary-storage.provider';
 import {
   IStorageProvider,
@@ -7,18 +6,8 @@ import {
 } from './interfaces/storage-provider.interface';
 import { StorageService } from './storage.service';
 
-const storageProviderFactory = (): IStorageProvider => {
-  const storageConfig = getStorageConfig();
-
-  switch (storageConfig.provider) {
-    case 'cloudinary':
-      return new CloudinaryStorageProvider();
-    default:
-      throw new Error(
-        `Storage provider '${storageConfig.provider}' is not supported`,
-      );
-  }
-};
+const storageProviderFactory = (): IStorageProvider =>
+  new CloudinaryStorageProvider();
 
 @Module({
   providers: [

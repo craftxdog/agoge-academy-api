@@ -127,7 +127,11 @@ describe('BillingController', () => {
       controller.getPayment('organization-id', 'payment-id'),
     ).resolves.toBe(response);
     await expect(
-      controller.updatePayment('organization-id', 'payment-id', updateDto as never),
+      controller.updatePayment(
+        'organization-id',
+        'payment-id',
+        updateDto as never,
+      ),
     ).resolves.toBe(response);
   });
 
@@ -139,10 +143,18 @@ describe('BillingController', () => {
     billingService.createTransaction.mockResolvedValue(response);
 
     await expect(
-      controller.listTransactions('organization-id', 'payment-id', query as never),
+      controller.listTransactions(
+        'organization-id',
+        'payment-id',
+        query as never,
+      ),
     ).resolves.toBe(response);
     await expect(
-      controller.createTransaction('organization-id', 'payment-id', dto as never),
+      controller.createTransaction(
+        'organization-id',
+        'payment-id',
+        dto as never,
+      ),
     ).resolves.toBe(response);
     expect(billingService.listTransactions).toHaveBeenCalledWith(
       'organization-id',

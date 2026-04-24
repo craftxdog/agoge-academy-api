@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { MemberStatus, PlatformRole, UserStatus } from 'generated/prisma/enums';
 import { AuthService } from './auth.service';
@@ -124,9 +121,9 @@ describe('AuthService', () => {
   });
 
   it('rejects switching organization without selector fields', async () => {
-    await expect(service.switchOrganization('user-id', {})).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.switchOrganization('user-id', {}),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('builds me() response with the active membership when requested', async () => {

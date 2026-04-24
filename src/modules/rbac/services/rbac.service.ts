@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PaginatedResult, SYSTEM_ROLES } from '../../../common';
 import {
+  CreatePermissionDto,
   CreateRoleDto,
   RbacAccessMatrixResponseDto,
   RbacMemberRoleResponseDto,
@@ -42,6 +43,48 @@ export class RbacService {
     });
 
     return permissions.map((permission) => this.mapPermission(permission));
+  }
+
+  async createPermission(
+    organizationId: string,
+    dto: CreatePermissionDto,
+  ): Promise<RbacPermissionResponseDto> {
+    const key = this.normalizeKey(dto.key);
+    const moduleKey = dto.moduleKey
+      ? this.normalizeKey(dto.moduleKey)
+      : undefined;
+
+    if (await this.rbacRepository.findPermissionByKey(key)) {
+      throw new ConflictException('Permission key already exists');
+    }
+
+    const module = moduleKey
+      ? await this.rbacRepository.findModuleByKey(moduleKey)
+      : null;
+
+    if (moduleKey && !module) {
+      throw new BadRequestException('Module key does not exist');
+    }
+
+    const permission = await this.rbacRepository.createPermission({
+      key,
+      name: dto.name.trim(),
+      description: dto.description?.trim(),
+      moduleId: module?.id,
+    });
+
+    const response = this.mapPermission(permission);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'permission',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.permissions', 'rbac.roles', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async listRoles(

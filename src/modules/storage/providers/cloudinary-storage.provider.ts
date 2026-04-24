@@ -27,10 +27,7 @@ export class CloudinaryStorageProvider implements IStorageProvider {
     });
   }
 
-  async upload(
-    file: StorageFile,
-    folder?: string,
-  ): Promise<UploadResult> {
+  async upload(file: StorageFile, folder?: string): Promise<UploadResult> {
     const key = buildKey(
       file.originalname,
       [this.config.cloudinary.folder, folder].filter(Boolean).join('/'),
@@ -98,7 +95,9 @@ export class CloudinaryStorageProvider implements IStorageProvider {
       return;
     }
 
-    throw new InternalServerErrorException('Storage asset could not be deleted');
+    throw new InternalServerErrorException(
+      'Storage asset could not be deleted',
+    );
   }
 
   getUrl(key: string): string {
