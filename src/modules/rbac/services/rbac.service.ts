@@ -25,10 +25,14 @@ import {
   RbacRepository,
   RbacRoleRecord,
 } from '../repositories/rbac.repository';
+import { RealtimeService } from '../../realtime';
 
 @Injectable()
 export class RbacService {
-  constructor(private readonly rbacRepository: RbacRepository) {}
+  constructor(
+    private readonly rbacRepository: RbacRepository,
+    private readonly realtimeService: RealtimeService,
+  ) {}
 
   async listPermissions(
     query: RbacPermissionQueryDto,
@@ -84,7 +88,18 @@ export class RbacService {
       permissionKeys,
     });
 
-    return this.mapRole(role);
+    const response = this.mapRole(role);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'role',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.roles', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async updateRole(
@@ -103,7 +118,18 @@ export class RbacService {
       isDefault: dto.isDefault,
     });
 
-    return this.mapRole(updatedRole);
+    const response = this.mapRole(updatedRole);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'role',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.roles', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async replaceRolePermissions(
@@ -123,7 +149,18 @@ export class RbacService {
       permissionKeys,
     });
 
-    return this.mapRole(updatedRole);
+    const response = this.mapRole(updatedRole);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'role',
+      action: 'permissions.replaced',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.roles', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async deleteRole(
@@ -144,7 +181,18 @@ export class RbacService {
       roleId,
     );
 
-    return this.mapRole(deletedRole);
+    const response = this.mapRole(deletedRole);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'role',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.roles', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async getMemberRoles(
@@ -172,7 +220,18 @@ export class RbacService {
       roleKeys,
     });
 
-    return this.mapMemberRoles(member);
+    const response = this.mapMemberRoles(member);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'member-role',
+      action: 'roles.replaced',
+      entityId: response.memberId,
+      data: response,
+      invalidate: ['rbac.member-roles', 'rbac.access-matrix', 'users.members'],
+    });
+
+    return response;
   }
 
   async getAccessMatrix(
@@ -349,5 +408,24 @@ export class RbacService {
         isVisible: screen.isVisible,
       })),
     };
+  }
+
+  private emitRbacEvent(params: {
+    organizationId: string;
+    resource: string;
+    action: string;
+    entityId?: string | null;
+    data: unknown;
+    invalidate: string[];
+  }): void {
+    this.realtimeService.publishOrganizationEvent({
+      organizationId: params.organizationId,
+      domain: 'rbac',
+      resource: params.resource,
+      action: params.action,
+      entityId: params.entityId,
+      data: params.data,
+      invalidate: params.invalidate,
+    });
   }
 }

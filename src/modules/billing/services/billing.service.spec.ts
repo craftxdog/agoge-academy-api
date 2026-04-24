@@ -137,11 +137,14 @@ describe('BillingService', () => {
     findOpenPayments: jest.fn(),
     findPaidPaymentsSince: jest.fn(),
   };
+  const realtimeService = {
+    publishOrganizationEvent: jest.fn(),
+  };
   let service: BillingService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new BillingService(repository as never);
+    service = new BillingService(repository as never, realtimeService as never);
   });
 
   it('requires amount when no payment type default exists', async () => {
@@ -226,6 +229,14 @@ describe('BillingService', () => {
         id: 'payment-id',
         organizationId: 'organization-id',
         status: PaymentStatus.PAID,
+      }),
+    );
+    expect(realtimeService.publishOrganizationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        domain: 'billing',
+        resource: 'transaction',
+        action: 'created',
       }),
     );
     expect(result.status).toBe(PaymentStatus.PAID);

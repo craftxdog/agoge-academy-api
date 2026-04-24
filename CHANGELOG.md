@@ -4,6 +4,19 @@ All notable changes to Agoge Academy API will be documented in this file.
 
 This project follows Semantic Versioning and Conventional Commits.
 
+## [0.4.0] - 2026-04-23
+
+### Added
+
+- Added a global Socket.IO realtime module under `/realtime` with tenant-aware room binding for user, member, and organization scopes.
+- Added realtime event publishing across users, billing, settings, RBAC, and schedules mutations so the frontend can react immediately after successful writes.
+- Added dedicated realtime unit coverage and service-level regression tests for the modules wired into socket notifications.
+
+### Fixed
+
+- Installed the missing websocket dependencies that were preventing the API from compiling after the realtime integration.
+- Corrected realtime logic so read-only endpoints no longer emit mutation events and write endpoints publish the correct action names.
+
 ## [0.3.2] - 2026-04-21
 
 ### Added

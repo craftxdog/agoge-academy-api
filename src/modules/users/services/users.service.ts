@@ -12,6 +12,7 @@ import {
 } from 'generated/prisma/enums';
 import { PaginatedResult } from '../../../common';
 import { PasswordService } from '../../auth';
+import { RealtimeService } from '../../realtime';
 import {
   AcceptInvitationDto,
   AcceptInvitationResponseDto,
@@ -36,6 +37,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly passwordService: PasswordService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async listMembers(
@@ -126,7 +128,18 @@ export class UsersService {
       roleIds,
     });
 
-    return this.mapMember(member);
+    const response = this.mapMember(member);
+
+    this.emitUsersEvent({
+      organizationId,
+      resource: 'member',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: ['users.members', 'analytics.members', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async updateMember(
@@ -154,7 +167,18 @@ export class UsersService {
       address: dto.address?.trim(),
     });
 
-    return this.mapMember(member);
+    const response = this.mapMember(member);
+
+    this.emitUsersEvent({
+      organizationId,
+      resource: 'member',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: ['users.members', 'analytics.members', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async updateMemberStatus(
@@ -176,7 +200,18 @@ export class UsersService {
       status: dto.status,
     });
 
-    return this.mapMember(member);
+    const response = this.mapMember(member);
+
+    this.emitUsersEvent({
+      organizationId,
+      resource: 'member',
+      action: 'status.updated',
+      entityId: response.id,
+      data: response,
+      invalidate: ['users.members', 'analytics.members', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async removeMember(
@@ -192,7 +227,18 @@ export class UsersService {
       memberId,
     );
 
-    return this.mapMember(member);
+    const response = this.mapMember(member);
+
+    this.emitUsersEvent({
+      organizationId,
+      resource: 'member',
+      action: 'removed',
+      entityId: response.id,
+      data: response,
+      invalidate: ['users.members', 'analytics.members', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async listInvitations(
@@ -247,10 +293,22 @@ export class UsersService {
       expiresAt,
     });
 
-    return {
-      ...this.mapInvitation(invitation),
+    const invitationResponse = this.mapInvitation(invitation);
+    const response = {
+      ...invitationResponse,
       token: invitation.token,
     };
+
+    this.emitUsersEvent({
+      organizationId: params.organizationId,
+      resource: 'invitation',
+      action: 'created',
+      entityId: invitationResponse.id,
+      data: invitationResponse,
+      invalidate: ['users.invitations', 'analytics.members'],
+    });
+
+    return response;
   }
 
   async revokeInvitation(
@@ -275,7 +333,18 @@ export class UsersService {
       invitationId,
     );
 
-    return this.mapInvitation(invitation);
+    const response = this.mapInvitation(invitation);
+
+    this.emitUsersEvent({
+      organizationId,
+      resource: 'invitation',
+      action: 'revoked',
+      entityId: response.id,
+      data: response,
+      invalidate: ['users.invitations', 'analytics.members'],
+    });
+
+    return response;
   }
 
   async acceptInvitation(
@@ -349,10 +418,26 @@ export class UsersService {
       roleIds,
     });
 
-    return {
+    const response = {
       member: this.mapMember(accepted.member),
       invitation: this.mapInvitation(accepted.invitation),
     };
+
+    this.emitUsersEvent({
+      organizationId: invitation.organizationId,
+      resource: 'invitation',
+      action: 'accepted',
+      entityId: response.invitation.id,
+      data: response,
+      invalidate: [
+        'users.invitations',
+        'users.members',
+        'analytics.members',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   private async getMemberOrThrow(
@@ -438,6 +523,25 @@ export class UsersService {
 
   private normalizeUniqueList(values: string[]): string[] {
     return [...new Set(values.map((value) => value.trim().toLowerCase()))];
+  }
+
+  private emitUsersEvent(params: {
+    organizationId: string;
+    resource: string;
+    action: string;
+    entityId?: string | null;
+    data: unknown;
+    invalidate: string[];
+  }): void {
+    this.realtimeService.publishOrganizationEvent({
+      organizationId: params.organizationId,
+      domain: 'users',
+      resource: params.resource,
+      action: params.action,
+      entityId: params.entityId,
+      data: params.data,
+      invalidate: params.invalidate,
+    });
   }
 
   private mapMember(member: UserMemberRecord): MemberResponseDto {

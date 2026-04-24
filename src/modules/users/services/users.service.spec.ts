@@ -82,11 +82,18 @@ describe('UsersService', () => {
   const passwordService = {
     hash: jest.fn(),
   };
+  const realtimeService = {
+    publishOrganizationEvent: jest.fn(),
+  };
   let service: UsersService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new UsersService(repository as never, passwordService as never);
+    service = new UsersService(
+      repository as never,
+      passwordService as never,
+      realtimeService as never,
+    );
   });
 
   it('requires a password when creating a brand-new platform user', async () => {
@@ -146,5 +153,23 @@ describe('UsersService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(repository.acceptInvitation).not.toHaveBeenCalled();
+  });
+
+  it('emits a removed realtime event after deleting a member', async () => {
+    repository.findMemberById.mockResolvedValue(createMemberRecord());
+    repository.removeMember.mockResolvedValue(
+      createMemberRecord({ status: MemberStatus.REMOVED }),
+    );
+
+    await service.removeMember('organization-id', 'member-id', 'other-member');
+
+    expect(realtimeService.publishOrganizationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        domain: 'users',
+        resource: 'member',
+        action: 'removed',
+      }),
+    );
   });
 });

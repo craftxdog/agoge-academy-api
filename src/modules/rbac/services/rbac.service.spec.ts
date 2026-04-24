@@ -17,6 +17,15 @@ const createRoleRecord = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const createMemberRoleRecord = (overrides: Record<string, unknown> = {}) => ({
+  id: 'member-id',
+  organizationId: 'organization-id',
+  userId: 'user-id',
+  status: 'ACTIVE',
+  roles: [],
+  ...overrides,
+});
+
 describe('RbacService', () => {
   const repository = {
     findPermissions: jest.fn(),
@@ -33,12 +42,15 @@ describe('RbacService', () => {
     replaceMemberRoles: jest.fn(),
     findAccessModules: jest.fn(),
   };
+  const realtimeService = {
+    publishOrganizationEvent: jest.fn(),
+  };
 
   let service: RbacService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new RbacService(repository as never);
+    service = new RbacService(repository as never, realtimeService as never);
   });
 
   it('normalizes role and permission keys when creating a role', async () => {
@@ -78,5 +90,35 @@ describe('RbacService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(repository.replaceRolePermissions).not.toHaveBeenCalled();
+  });
+
+  it('emits realtime after replacing member roles', async () => {
+    repository.findMemberRoles.mockResolvedValue(createMemberRoleRecord());
+    repository.findExistingRoleKeys.mockResolvedValue(['coach']);
+    repository.replaceMemberRoles.mockResolvedValue(
+      createMemberRoleRecord({
+        roles: [
+          {
+            role: createRoleRecord({
+              key: 'coach',
+              name: 'Coach',
+            }),
+          },
+        ],
+      }),
+    );
+
+    await service.replaceMemberRoles('organization-id', 'member-id', {
+      roleKeys: ['coach'],
+    });
+
+    expect(realtimeService.publishOrganizationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        domain: 'rbac',
+        resource: 'member-role',
+        action: 'roles.replaced',
+      }),
+    );
   });
 });

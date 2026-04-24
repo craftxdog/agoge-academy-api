@@ -72,12 +72,19 @@ describe('SettingsService', () => {
     upload: jest.fn(),
     delete: jest.fn(),
   };
+  const realtimeService = {
+    publishOrganizationEvent: jest.fn(),
+  };
   let service: SettingsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     repository.findOrganization.mockResolvedValue(organization);
-    service = new SettingsService(repository as never, storageService as never);
+    service = new SettingsService(
+      repository as never,
+      storageService as never,
+      realtimeService as never,
+    );
   });
 
   it('throws when organization is missing', async () => {
@@ -139,7 +146,8 @@ describe('SettingsService', () => {
       branding: {
         id: 'branding-id',
         organizationId: 'organization-id',
-        logoUrl: 'https://res.cloudinary.com/demo/image/upload/v1/agoge/logo.png',
+        logoUrl:
+          'https://res.cloudinary.com/demo/image/upload/v1/agoge/logo.png',
         logoKey: 'agoge/organizations/organization-id/branding/logo',
         iconUrl: null,
         iconKey: null,
@@ -178,6 +186,23 @@ describe('SettingsService', () => {
     });
     expect(storageService.delete).toHaveBeenCalledWith(
       'agoge/organizations/organization-id/branding/logo',
+    );
+  });
+
+  it('emits realtime after updating the organization profile', async () => {
+    repository.updateOrganization.mockResolvedValue(organization);
+
+    await service.updateOrganizationProfile('organization-id', {
+      name: 'Agoge Academy',
+    });
+
+    expect(realtimeService.publishOrganizationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        domain: 'settings',
+        resource: 'organization',
+        action: 'updated',
+      }),
     );
   });
 });

@@ -34,6 +34,7 @@ import {
   ScheduleMemberScheduleRecord,
   SchedulesRepository,
 } from '../repositories';
+import { RealtimeService } from '../../realtime';
 import {
   assertLocalDate,
   assertSupportedTimezone,
@@ -57,7 +58,10 @@ type TimeWindow = {
 
 @Injectable()
 export class SchedulesService {
-  constructor(private readonly schedulesRepository: SchedulesRepository) {}
+  constructor(
+    private readonly schedulesRepository: SchedulesRepository,
+    private readonly realtimeService: RealtimeService,
+  ) {}
 
   async listLocations(
     organizationId: string,
@@ -92,7 +96,23 @@ export class SchedulesService {
       isActive: dto.isActive ?? true,
     });
 
-    return this.mapLocation(location);
+    const response = this.mapLocation(location);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'location',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.locations',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updateLocation(
@@ -126,7 +146,23 @@ export class SchedulesService {
       isActive: dto.isActive,
     });
 
-    return this.mapLocation(location);
+    const response = this.mapLocation(location);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'location',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.locations',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async deleteLocation(
@@ -147,7 +183,23 @@ export class SchedulesService {
         isActive: false,
       });
 
-      return this.mapLocation(inactive);
+      const response = this.mapLocation(inactive);
+
+      this.emitSchedulesEvent({
+        organizationId,
+        resource: 'location',
+        action: 'archived',
+        entityId: response.id,
+        data: response,
+        invalidate: [
+          'schedules.locations',
+          'schedules.day',
+          'analytics.operations',
+          'analytics.dashboard',
+        ],
+      });
+
+      return response;
     }
 
     const deleted = await this.schedulesRepository.deleteLocation(
@@ -155,7 +207,23 @@ export class SchedulesService {
       location.id,
     );
 
-    return this.mapLocation(deleted);
+    const response = this.mapLocation(deleted);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'location',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.locations',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listBusinessHours(
@@ -200,7 +268,23 @@ export class SchedulesService {
       isClosed: dto.isClosed ?? false,
     });
 
-    return this.mapBusinessHour(hour);
+    const response = this.mapBusinessHour(hour);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'business-hours',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.business-hours',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async replaceBusinessHours(
@@ -231,7 +315,23 @@ export class SchedulesService {
       })),
     });
 
-    return hours.map((hour) => this.mapBusinessHour(hour));
+    const response = hours.map((hour) => this.mapBusinessHour(hour));
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'business-hours',
+      action: 'replaced',
+      entityId: locationId,
+      data: response,
+      invalidate: [
+        'schedules.business-hours',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updateBusinessHour(
@@ -264,7 +364,23 @@ export class SchedulesService {
       isClosed: dto.isClosed,
     });
 
-    return this.mapBusinessHour(hour);
+    const response = this.mapBusinessHour(hour);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'business-hours',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.business-hours',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async deleteBusinessHour(
@@ -277,7 +393,23 @@ export class SchedulesService {
       businessHourId,
     );
 
-    return this.mapBusinessHour(deleted);
+    const response = this.mapBusinessHour(deleted);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'business-hours',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.business-hours',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listExceptions(
@@ -321,7 +453,23 @@ export class SchedulesService {
       isClosed: normalized.isClosed,
     });
 
-    return this.mapException(exception);
+    const response = this.mapException(exception);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'exception',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.exceptions',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updateException(
@@ -364,7 +512,23 @@ export class SchedulesService {
       isClosed: dto.isClosed,
     });
 
-    return this.mapException(exception);
+    const response = this.mapException(exception);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'exception',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.exceptions',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async deleteException(
@@ -377,7 +541,23 @@ export class SchedulesService {
       exceptionId,
     );
 
-    return this.mapException(deleted);
+    const response = this.mapException(deleted);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'exception',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.exceptions',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listMemberSchedules(
@@ -428,7 +608,23 @@ export class SchedulesService {
       endTime: parseClockTime(dto.endTime),
     });
 
-    return this.mapMemberSchedule(schedule);
+    const response = this.mapMemberSchedule(schedule);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'member-availability',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.member-availability',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async replaceMemberSchedules(
@@ -465,7 +661,23 @@ export class SchedulesService {
       })),
     });
 
-    return schedules.map((schedule) => this.mapMemberSchedule(schedule));
+    const response = schedules.map((schedule) => this.mapMemberSchedule(schedule));
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'member-availability',
+      action: 'replaced',
+      entityId: member.id,
+      data: response,
+      invalidate: [
+        'schedules.member-availability',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updateMemberSchedule(
@@ -499,7 +711,23 @@ export class SchedulesService {
       endTime: dto.endTime ? parseClockTime(dto.endTime) : undefined,
     });
 
-    return this.mapMemberSchedule(schedule);
+    const response = this.mapMemberSchedule(schedule);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'member-availability',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.member-availability',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async deleteMemberSchedule(
@@ -510,7 +738,23 @@ export class SchedulesService {
     const deleted =
       await this.schedulesRepository.deleteMemberSchedule(scheduleId);
 
-    return this.mapMemberSchedule(deleted);
+    const response = this.mapMemberSchedule(deleted);
+
+    this.emitSchedulesEvent({
+      organizationId,
+      resource: 'member-availability',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'schedules.member-availability',
+        'schedules.day',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async getDaySchedule(
@@ -962,5 +1206,24 @@ export class SchedulesService {
       createdAt: schedule.createdAt,
       updatedAt: schedule.updatedAt,
     };
+  }
+
+  private emitSchedulesEvent(params: {
+    organizationId: string;
+    resource: string;
+    action: string;
+    entityId?: string | null;
+    data: unknown;
+    invalidate: string[];
+  }): void {
+    this.realtimeService.publishOrganizationEvent({
+      organizationId: params.organizationId,
+      domain: 'schedules',
+      resource: params.resource,
+      action: params.action,
+      entityId: params.entityId,
+      data: params.data,
+      invalidate: params.invalidate,
+    });
   }
 }

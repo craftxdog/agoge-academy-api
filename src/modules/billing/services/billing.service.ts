@@ -11,6 +11,7 @@ import {
   PaymentTransactionStatus,
 } from 'generated/prisma/enums';
 import { PaginatedResult } from '../../../common';
+import { RealtimeService } from '../../realtime';
 import {
   BillingCatalogQueryDto,
   BillingSummaryResponseDto,
@@ -43,7 +44,10 @@ const TERMINAL_PAYMENT_STATUSES = [
 
 @Injectable()
 export class BillingService {
-  constructor(private readonly billingRepository: BillingRepository) {}
+  constructor(
+    private readonly billingRepository: BillingRepository,
+    private readonly realtimeService: RealtimeService,
+  ) {}
 
   async listPaymentTypes(
     organizationId: string,
@@ -81,7 +85,24 @@ export class BillingService {
       config: dto.config,
     });
 
-    return this.mapPaymentType(paymentType);
+    const response = this.mapPaymentType(paymentType);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment-type',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payment-types',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updatePaymentType(
@@ -102,7 +123,24 @@ export class BillingService {
       config: dto.config,
     });
 
-    return this.mapPaymentType(paymentType);
+    const response = this.mapPaymentType(paymentType);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment-type',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payment-types',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async deletePaymentType(
@@ -126,7 +164,24 @@ export class BillingService {
         isActive: false,
       });
 
-      return this.mapPaymentType(archived);
+      const response = this.mapPaymentType(archived);
+
+      this.emitBillingEvent({
+        organizationId,
+        resource: 'payment-type',
+        action: 'archived',
+        entityId: response.id,
+        data: response,
+        invalidate: [
+          'billing.payment-types',
+          'billing.payments',
+          'billing.summary',
+          'analytics.revenue',
+          'analytics.dashboard',
+        ],
+      });
+
+      return response;
     }
 
     const deleted = await this.billingRepository.deletePaymentType(
@@ -134,7 +189,24 @@ export class BillingService {
       paymentType.id,
     );
 
-    return this.mapPaymentType(deleted);
+    const response = this.mapPaymentType(deleted);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment-type',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payment-types',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listPaymentMethods(
@@ -171,7 +243,24 @@ export class BillingService {
       config: dto.config,
     });
 
-    return this.mapPaymentMethod(paymentMethod);
+    const response = this.mapPaymentMethod(paymentMethod);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment-method',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payment-methods',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updatePaymentMethod(
@@ -190,7 +279,24 @@ export class BillingService {
       config: dto.config,
     });
 
-    return this.mapPaymentMethod(paymentMethod);
+    const response = this.mapPaymentMethod(paymentMethod);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment-method',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payment-methods',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async deletePaymentMethod(
@@ -214,7 +320,24 @@ export class BillingService {
         isActive: false,
       });
 
-      return this.mapPaymentMethod(archived);
+      const response = this.mapPaymentMethod(archived);
+
+      this.emitBillingEvent({
+        organizationId,
+        resource: 'payment-method',
+        action: 'archived',
+        entityId: response.id,
+        data: response,
+        invalidate: [
+          'billing.payment-methods',
+          'billing.payments',
+          'billing.summary',
+          'analytics.revenue',
+          'analytics.dashboard',
+        ],
+      });
+
+      return response;
     }
 
     const deleted = await this.billingRepository.deletePaymentMethod(
@@ -222,7 +345,24 @@ export class BillingService {
       paymentMethod.id,
     );
 
-    return this.mapPaymentMethod(deleted);
+    const response = this.mapPaymentMethod(deleted);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment-method',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payment-methods',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listPayments(
@@ -247,7 +387,23 @@ export class BillingService {
   ): Promise<PaymentResponseDto> {
     const payment = await this.getPaymentOrThrow(organizationId, paymentId);
 
-    return this.mapPayment(payment);
+    const response = this.mapPayment(payment);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async createPayment(
@@ -282,7 +438,23 @@ export class BillingService {
       metadata: dto.metadata,
     });
 
-    return this.mapPayment(payment);
+    const response = this.mapPayment(payment);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async updatePayment(
@@ -340,7 +512,7 @@ export class BillingService {
       );
     }
 
-    await this.billingRepository.createTransaction({
+    const transaction = await this.billingRepository.createTransaction({
       paymentId: payment.id,
       paymentMethodId: paymentMethod?.id,
       amount: dto.amount,
@@ -369,7 +541,41 @@ export class BillingService {
       paidAt,
     });
 
-    return this.mapPayment(settledPayment);
+    const response = this.mapPayment(settledPayment);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'transaction',
+      action: 'created',
+      entityId: transaction.id,
+      data: {
+        paymentId: payment.id,
+        transaction: this.mapTransaction(transaction),
+        payment: response,
+      },
+      invalidate: [
+        'billing.payment-transactions',
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listTransactions(
@@ -650,5 +856,24 @@ export class BillingService {
       metadata: transaction.metadata,
       createdAt: transaction.createdAt,
     };
+  }
+
+  private emitBillingEvent(params: {
+    organizationId: string;
+    resource: string;
+    action: string;
+    entityId?: string | null;
+    data: unknown;
+    invalidate: string[];
+  }): void {
+    this.realtimeService.publishOrganizationEvent({
+      organizationId: params.organizationId,
+      domain: 'billing',
+      resource: params.resource,
+      action: params.action,
+      entityId: params.entityId,
+      data: params.data,
+      invalidate: params.invalidate,
+    });
   }
 }

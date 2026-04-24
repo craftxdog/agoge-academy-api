@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ScreenType } from 'generated/prisma/enums';
 import { SYSTEM_MODULES } from '../../../common';
+import { RealtimeService } from '../../realtime';
 import { StorageFile, StorageService } from '../../storage';
 import {
   CreateOrganizationScreenDto,
@@ -38,6 +39,7 @@ export class SettingsService {
   constructor(
     private readonly settingsRepository: SettingsRepository,
     private readonly storageService: StorageService,
+    private readonly realtimeService: RealtimeService,
   ) {}
 
   async getOrganizationProfile(
@@ -66,7 +68,18 @@ export class SettingsService {
       },
     );
 
-    return this.mapOrganization(organization);
+    const response = this.mapOrganization(organization);
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'organization',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: ['settings.organization', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async updateBranding(
@@ -86,7 +99,18 @@ export class SettingsService {
 
     await this.deleteBrandingAssets(keysToDelete);
 
-    return this.mapBranding(branding);
+    const response = this.mapBranding(branding);
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'branding',
+      action: 'updated',
+      entityId: branding.id,
+      data: response,
+      invalidate: ['settings.organization', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async uploadBrandingAsset(
@@ -118,7 +142,18 @@ export class SettingsService {
 
       await this.deleteBrandingAssets(currentKey ? [currentKey] : []);
 
-      return this.mapBranding(branding);
+      const response = this.mapBranding(branding);
+
+      this.emitSettingsEvent({
+        organizationId,
+        resource: 'branding',
+        action: 'updated',
+        entityId: branding.id,
+        data: response,
+        invalidate: ['settings.organization', 'analytics.dashboard'],
+      });
+
+      return response;
     } catch (error) {
       await this.storageService.delete(upload.key);
       throw error;
@@ -162,7 +197,17 @@ export class SettingsService {
       settings,
     );
 
-    return savedSettings.map((setting) => this.mapSetting(setting));
+    const response = savedSettings.map((setting) => this.mapSetting(setting));
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'preferences',
+      action: 'updated',
+      data: response,
+      invalidate: ['settings.preferences', 'analytics.dashboard'],
+    });
+
+    return response;
   }
 
   async listModules(
@@ -202,7 +247,24 @@ export class SettingsService {
       dto,
     });
 
-    return this.mapModule(module);
+    const response = this.mapModule(module);
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'module',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'settings.modules',
+        'settings.screens',
+        'rbac.access-matrix',
+        'analytics.operations',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async listScreens(
@@ -241,7 +303,18 @@ export class SettingsService {
       dto: normalizedDto,
     });
 
-    return this.mapScreen(screen);
+    const response = this.mapScreen(screen);
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'screen',
+      action: 'created',
+      entityId: response.id,
+      data: response,
+      invalidate: ['settings.screens', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async updateScreen(
@@ -271,7 +344,18 @@ export class SettingsService {
       },
     });
 
-    return this.mapScreen(updatedScreen);
+    const response = this.mapScreen(updatedScreen);
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'screen',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: ['settings.screens', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   async deleteScreen(
@@ -290,7 +374,18 @@ export class SettingsService {
       screenId,
     );
 
-    return this.mapScreen(deletedScreen);
+    const response = this.mapScreen(deletedScreen);
+
+    this.emitSettingsEvent({
+      organizationId,
+      resource: 'screen',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: ['settings.screens', 'rbac.access-matrix'],
+    });
+
+    return response;
   }
 
   private async getOrganizationOrThrow(
@@ -543,5 +638,24 @@ export class SettingsService {
       isVisible: screen.isVisible,
       updatedAt: screen.updatedAt,
     };
+  }
+
+  private emitSettingsEvent(params: {
+    organizationId: string;
+    resource: string;
+    action: string;
+    entityId?: string | null;
+    data: unknown;
+    invalidate: string[];
+  }): void {
+    this.realtimeService.publishOrganizationEvent({
+      organizationId: params.organizationId,
+      domain: 'settings',
+      resource: params.resource,
+      action: params.action,
+      entityId: params.entityId,
+      data: params.data,
+      invalidate: params.invalidate,
+    });
   }
 }

@@ -123,11 +123,17 @@ describe('SchedulesService', () => {
     deleteMemberSchedule: jest.fn(),
     replaceMemberSchedules: jest.fn(),
   };
+  const realtimeService = {
+    publishOrganizationEvent: jest.fn(),
+  };
   let service: SchedulesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new SchedulesService(repository as never);
+    service = new SchedulesService(
+      repository as never,
+      realtimeService as never,
+    );
   });
 
   it('defaults new locations to America/Managua timezone', async () => {
@@ -216,5 +222,23 @@ describe('SchedulesService', () => {
     expect(result.isClosed).toBe(true);
     expect(result.businessHours).toHaveLength(0);
     expect(result.timezone).toBe('America/Managua');
+  });
+
+  it('emits realtime after creating a location', async () => {
+    repository.findLocationByName.mockResolvedValue(null);
+    repository.createLocation.mockResolvedValue(createLocationRecord());
+
+    await service.createLocation('organization-id', {
+      name: 'Agoge Central Managua',
+    });
+
+    expect(realtimeService.publishOrganizationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        domain: 'schedules',
+        resource: 'location',
+        action: 'created',
+      }),
+    );
   });
 });

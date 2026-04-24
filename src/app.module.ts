@@ -6,6 +6,7 @@ import { AnalyticsModule } from './modules/analytics';
 import { AuditModule } from './modules/audit';
 import { AuthModule } from './modules/auth';
 import { BillingModule } from './modules/billing';
+import { RealtimeModule } from './modules/realtime';
 import { RbacModule } from './modules/rbac';
 import { SchedulesModule } from './modules/schedules';
 import { SettingsModule } from './modules/settings';
@@ -14,6 +15,7 @@ import { UsersModule } from './modules/users';
 @Module({
   imports: [
     PrismaModule,
+    RealtimeModule,
     AnalyticsModule,
     AuditModule,
     AuthModule,
