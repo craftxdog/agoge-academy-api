@@ -1,4 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import { buildKey } from '../../../common/utils';
 import { getStorageConfig } from '../../../config';
@@ -11,23 +15,26 @@ import {
 @Injectable()
 export class CloudinaryStorageProvider implements IStorageProvider {
   private readonly config = getStorageConfig();
+  private readonly isConfigured: boolean;
 
   constructor() {
     const { cloudName, apiKey, apiSecret } = this.config.cloudinary;
 
-    if (!cloudName || !apiKey || !apiSecret) {
-      throw new Error('Cloudinary storage configuration is missing');
-    }
+    this.isConfigured = Boolean(cloudName && apiKey && apiSecret);
 
-    cloudinary.config({
-      cloud_name: cloudName,
-      api_key: apiKey,
-      api_secret: apiSecret,
-      secure: true,
-    });
+    if (this.isConfigured) {
+      cloudinary.config({
+        cloud_name: cloudName,
+        api_key: apiKey,
+        api_secret: apiSecret,
+        secure: true,
+      });
+    }
   }
 
   async upload(file: StorageFile, folder?: string): Promise<UploadResult> {
+    this.assertConfigured();
+
     const key = buildKey(
       file.originalname,
       [this.config.cloudinary.folder, folder].filter(Boolean).join('/'),
@@ -69,6 +76,8 @@ export class CloudinaryStorageProvider implements IStorageProvider {
   }
 
   async delete(key: string): Promise<void> {
+    this.assertConfigured();
+
     const resourceTypes: Array<'image' | 'raw' | 'video'> = [
       'image',
       'raw',
@@ -101,6 +110,17 @@ export class CloudinaryStorageProvider implements IStorageProvider {
   }
 
   getUrl(key: string): string {
+    this.assertConfigured();
     return cloudinary.url(key, { secure: true });
+  }
+
+  private assertConfigured(): void {
+    if (this.isConfigured) {
+      return;
+    }
+
+    throw new ServiceUnavailableException(
+      'Cloudinary storage is not configured',
+    );
   }
 }
