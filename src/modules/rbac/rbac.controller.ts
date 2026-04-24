@@ -32,6 +32,7 @@ import {
   TenantGuard,
 } from '../../common';
 import {
+  CreatePermissionDto,
   CreateRoleDto,
   RbacAccessMatrixResponseDto,
   RbacMemberRoleResponseDto,
@@ -63,6 +64,20 @@ export class RbacController {
   @ApiOkResponse({ type: [RbacPermissionResponseDto] })
   listPermissions(@Query() query: RbacPermissionQueryDto) {
     return this.rbacService.listPermissions(query);
+  }
+
+  @Post('permissions')
+  @ApiOperation({
+    summary: 'Create a SaaS permission',
+    description:
+      'Creates a global permission catalog entry, optionally links it to a module and backfills protected tenant admin roles to keep full access intact.',
+  })
+  @ApiCreatedResponse({ type: RbacPermissionResponseDto })
+  createPermission(
+    @CurrentOrganization('id') organizationId: string,
+    @Body() dto: CreatePermissionDto,
+  ) {
+    return this.rbacService.createPermission(organizationId, dto);
   }
 
   @Get('roles')
@@ -175,7 +190,7 @@ export class RbacController {
   @ApiOperation({
     summary: 'Replace roles assigned to a member',
     description:
-      'Replaces the complete role set for a member in the active tenant. The member should refresh or switch organization to receive updated JWT claims.',
+      'Replaces the complete role set for a member in the active tenant. Updated permissions are applied on the next authenticated request without refreshing the session.',
   })
   @ApiParam({ name: 'memberId', format: 'uuid' })
   @ApiOkResponse({ type: RbacMemberRoleResponseDto })

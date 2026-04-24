@@ -24,10 +24,15 @@ import {
   realtimeMemberRoom,
   realtimeOrganizationRoom,
   realtimeUserRoom,
+  resolveLiveAccessContext,
 } from '../../common';
 import { getAppConfig, getJwtConfig } from '../../config';
+import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from './realtime.service';
-import { RealtimeSocketAuthContext, RealtimeSyncPayload } from './realtime.types';
+import {
+  RealtimeSocketAuthContext,
+  RealtimeSyncPayload,
+} from './realtime.types';
 import { Server, Socket } from 'socket.io';
 
 type RealtimeSocket = Socket & {
@@ -56,6 +61,7 @@ export class RealtimeGateway
 
   constructor(
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
   ) {}
 
@@ -88,14 +94,21 @@ export class RealtimeGateway
     @MessageBody() payload: RealtimeSyncPayload = {},
   ) {
     try {
-      const context = await this.authenticateClient(client, payload.accessToken);
+      const context = await this.authenticateClient(
+        client,
+        payload.accessToken,
+      );
       await this.bindClientContext(client, context);
       const snapshot = this.realtimeService.buildConnectionSnapshot(
         client,
         context,
       );
 
-      this.realtimeService.emitToClient(client, REALTIME_CONTEXT_EVENT, snapshot);
+      this.realtimeService.emitToClient(
+        client,
+        REALTIME_CONTEXT_EVENT,
+        snapshot,
+      );
 
       return snapshot;
     } catch (error) {
@@ -127,16 +140,37 @@ export class RealtimeGateway
     }
 
     const payload = await this.verifyAccessToken(token);
+    const liveAccessContext = await resolveLiveAccessContext(
+      this.prisma,
+      payload,
+    );
+
+    if (
+      payload.memberId &&
+      payload.organizationId &&
+      !liveAccessContext.member
+    ) {
+      throw new UnauthorizedException(
+        'Organization membership is no longer active',
+      );
+    }
+
+    const resolvedPayload = this.mergeLiveAccessPayload(
+      payload,
+      liveAccessContext,
+    );
 
     return {
       token,
       connectedAt: client.data.realtimeAuth?.connectedAt ?? new Date(),
-      payload,
-      managedRooms: this.resolveManagedRooms(payload),
+      payload: resolvedPayload,
+      managedRooms: this.resolveManagedRooms(resolvedPayload),
     };
   }
 
-  private extractTokenFromHandshake(client: RealtimeSocket): string | undefined {
+  private extractTokenFromHandshake(
+    client: RealtimeSocket,
+  ): string | undefined {
     const authToken =
       typeof client.handshake.auth?.token === 'string'
         ? client.handshake.auth.token
@@ -155,9 +189,12 @@ export class RealtimeGateway
 
   private async verifyAccessToken(token: string): Promise<JwtAccessPayload> {
     try {
-      const payload = await this.jwtService.verifyAsync<JwtAccessPayload>(token, {
-        secret: this.jwtConfig.accessSecret,
-      });
+      const payload = await this.jwtService.verifyAsync<JwtAccessPayload>(
+        token,
+        {
+          secret: this.jwtConfig.accessSecret,
+        },
+      );
 
       if (!payload.sub || !payload.email) {
         throw new Error('Invalid payload');
@@ -187,17 +224,37 @@ export class RealtimeGateway
     return rooms;
   }
 
+  private mergeLiveAccessPayload(
+    payload: JwtAccessPayload,
+    liveAccessContext: Awaited<ReturnType<typeof resolveLiveAccessContext>>,
+  ): JwtAccessPayload {
+    return {
+      ...payload,
+      organizationId:
+        liveAccessContext.organization?.id ?? payload.organizationId,
+      organizationSlug:
+        liveAccessContext.organization?.slug ?? payload.organizationSlug,
+      memberId: liveAccessContext.member?.id ?? payload.memberId,
+      roles: liveAccessContext.member?.roles ?? payload.roles,
+      permissions: liveAccessContext.member?.permissions ?? payload.permissions,
+      enabledModules:
+        liveAccessContext.member?.enabledModules ?? payload.enabledModules,
+    };
+  }
+
   private async bindClientContext(
     client: RealtimeSocket,
     context: RealtimeSocketAuthContext,
   ): Promise<void> {
     const previousRooms = [...(client.data.realtimeAuth?.managedRooms ?? [])];
 
-    if (previousRooms.length > 0) {
-      await Promise.all(previousRooms.map((room) => client.leave(room)));
+    for (const room of previousRooms) {
+      await client.leave(room);
     }
 
-    await Promise.all(context.managedRooms.map((room) => client.join(room)));
+    for (const room of context.managedRooms) {
+      await client.join(room);
+    }
     client.data.realtimeAuth = context;
 
     this.logger.debug(

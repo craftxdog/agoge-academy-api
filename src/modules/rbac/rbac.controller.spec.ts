@@ -3,6 +3,7 @@ import { RbacController } from './rbac.controller';
 describe('RbacController', () => {
   const rbacService = {
     listPermissions: jest.fn(),
+    createPermission: jest.fn(),
     listRoles: jest.fn(),
     createRole: jest.fn(),
     getRole: jest.fn(),
@@ -37,6 +38,21 @@ describe('RbacController', () => {
     expect(rbacService.getAccessMatrix).toHaveBeenCalledWith('organization-id');
   });
 
+  it('delegates permission creation requests', async () => {
+    const dto = { key: 'schedules.write', name: 'Write schedules' };
+    const response = { id: 'permission-id' };
+    rbacService.createPermission.mockResolvedValue(response);
+
+    await expect(
+      controller.createPermission('organization-id', dto as never),
+    ).resolves.toBe(response);
+
+    expect(rbacService.createPermission).toHaveBeenCalledWith(
+      'organization-id',
+      dto,
+    );
+  });
+
   it('delegates role CRUD requests', async () => {
     const query = { search: 'admin' };
     const dto = { key: 'coach', name: 'Coach' };
@@ -54,22 +70,20 @@ describe('RbacController', () => {
     await expect(
       controller.createRole('organization-id', dto as never),
     ).resolves.toBe(response);
-    await expect(controller.getRole('organization-id', 'role-id')).resolves.toBe(
-      response,
-    );
+    await expect(
+      controller.getRole('organization-id', 'role-id'),
+    ).resolves.toBe(response);
     await expect(
       controller.updateRole('organization-id', 'role-id', dto as never),
     ).resolves.toBe(response);
     await expect(
-      controller.replaceRolePermissions(
-        'organization-id',
-        'role-id',
-        { permissionKeys: ['billing.read'] } as never,
-      ),
+      controller.replaceRolePermissions('organization-id', 'role-id', {
+        permissionKeys: ['billing.read'],
+      } as never),
     ).resolves.toBe(response);
-    await expect(controller.deleteRole('organization-id', 'role-id')).resolves.toBe(
-      response,
-    );
+    await expect(
+      controller.deleteRole('organization-id', 'role-id'),
+    ).resolves.toBe(response);
   });
 
   it('delegates member role requests', async () => {
@@ -81,11 +95,9 @@ describe('RbacController', () => {
       controller.getMemberRoles('organization-id', 'member-id'),
     ).resolves.toBe(response);
     await expect(
-      controller.replaceMemberRoles(
-        'organization-id',
-        'member-id',
-        { roleKeys: ['admin'] } as never,
-      ),
+      controller.replaceMemberRoles('organization-id', 'member-id', {
+        roleKeys: ['admin'],
+      } as never),
     ).resolves.toBe(response);
     expect(rbacService.getMemberRoles).toHaveBeenCalledWith(
       'organization-id',

@@ -29,11 +29,14 @@ const createMemberRoleRecord = (overrides: Record<string, unknown> = {}) => ({
 describe('RbacService', () => {
   const repository = {
     findPermissions: jest.fn(),
+    findPermissionByKey: jest.fn(),
+    findModuleByKey: jest.fn(),
     findRolesPage: jest.fn(),
     findRoleById: jest.fn(),
     findRoleByKey: jest.fn(),
     findExistingPermissionKeys: jest.fn(),
     findExistingRoleKeys: jest.fn(),
+    createPermission: jest.fn(),
     createRole: jest.fn(),
     updateRole: jest.fn(),
     replaceRolePermissions: jest.fn(),
@@ -74,6 +77,54 @@ describe('RbacService', () => {
       expect.objectContaining({
         key: 'front-desk',
         permissionKeys: ['users.read', 'settings.read'],
+      }),
+    );
+  });
+
+  it('creates permissions with normalized keys and module linkage', async () => {
+    repository.findPermissionByKey.mockResolvedValue(null);
+    repository.findModuleByKey.mockResolvedValue({
+      id: 'module-id',
+      key: 'schedules',
+      name: 'Schedules',
+      description: null,
+    });
+    repository.createPermission.mockResolvedValue({
+      id: 'permission-id',
+      key: 'schedules.write',
+      name: 'Write schedules',
+      description: null,
+      module: {
+        id: 'module-id',
+        key: 'schedules',
+        name: 'Schedules',
+        description: null,
+        status: 'ACTIVE',
+        sortOrder: 0,
+        createdAt: new Date('2026-04-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-20T00:00:00.000Z'),
+      },
+      createdAt: new Date('2026-04-20T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-20T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.createPermission('organization-id', {
+        key: 'SCHEDULES.WRITE',
+        name: 'Write schedules',
+        moduleKey: 'SCHEDULES',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        key: 'schedules.write',
+        module: expect.objectContaining({ key: 'schedules' }),
+      }),
+    );
+
+    expect(repository.createPermission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: 'schedules.write',
+        moduleId: 'module-id',
       }),
     );
   });

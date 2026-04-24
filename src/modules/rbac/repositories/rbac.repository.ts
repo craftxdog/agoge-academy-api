@@ -6,6 +6,7 @@ import {
   buildCursorPagination,
   getCursorId,
   PaginatedResult,
+  SYSTEM_ROLES,
 } from '../../../common';
 import { RbacRoleQueryDto } from '../dto';
 
@@ -94,6 +95,30 @@ export class RbacRepository {
         : undefined,
       include: permissionInclude,
       orderBy: [{ key: 'asc' }],
+    });
+  }
+
+  findPermissionByKey(key: string): Promise<RbacPermissionRecord | null> {
+    return this.prisma.permission.findUnique({
+      where: { key },
+      include: permissionInclude,
+    });
+  }
+
+  findModuleByKey(key: string): Promise<{
+    id: string;
+    key: string;
+    name: string;
+    description: string | null;
+  } | null> {
+    return this.prisma.appModule.findUnique({
+      where: { key },
+      select: {
+        id: true,
+        key: true,
+        name: true,
+        description: true,
+      },
     });
   }
 
@@ -235,6 +260,45 @@ export class RbacRepository {
         where: { id: role.id },
         include: roleInclude,
       });
+    });
+  }
+
+  async createPermission(params: {
+    key: string;
+    name: string;
+    description?: string;
+    moduleId?: string;
+  }): Promise<RbacPermissionRecord> {
+    return this.prisma.$transaction(async (tx) => {
+      const permission = await tx.permission.create({
+        data: {
+          key: params.key,
+          name: params.name,
+          description: params.description,
+          moduleId: params.moduleId,
+        },
+        include: permissionInclude,
+      });
+
+      const adminRoles = await tx.role.findMany({
+        where: {
+          key: SYSTEM_ROLES.admin,
+          isSystem: true,
+        },
+        select: { id: true },
+      });
+
+      if (adminRoles.length > 0) {
+        await tx.rolePermission.createMany({
+          data: adminRoles.map((role) => ({
+            roleId: role.id,
+            permissionId: permission.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return permission;
     });
   }
 
