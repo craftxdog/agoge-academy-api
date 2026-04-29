@@ -41,7 +41,7 @@ export type AuthSession = {
 
 export type RefreshTokenPayload = Pick<
   JwtAccessPayload,
-  'sub' | 'email' | 'platformRole'
+  'sub' | 'email' | 'platformRole' | 'organizationId' | 'organizationSlug'
 > & {
   tokenType: 'refresh';
 };

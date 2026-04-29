@@ -87,7 +87,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Rotate refresh token and issue a new access token',
     description:
-      'Reads the refresh token from the httpOnly cookie first, then from the request body as a fallback for non-browser clients.',
+      'Reads the refresh token from the httpOnly cookie first, then from the request body as a fallback for non-browser clients. The server keeps the previously selected tenant when the refresh session is already tenant-scoped.',
   })
   @ApiOkResponse({ type: AuthSessionResponseDto })
   async refresh(
@@ -96,7 +96,7 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const refreshToken = request.cookies?.[REFRESH_COOKIE] ?? dto.refreshToken;
-    const session = await this.authService.refresh(refreshToken);
+    const session = await this.authService.refresh(refreshToken, dto);
     this.setRefreshCookie(response, session.tokens.refreshToken);
 
     return session;
