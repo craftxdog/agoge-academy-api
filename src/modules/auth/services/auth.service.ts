@@ -91,7 +91,10 @@ export class AuthService {
     return this.createSession(user, activeMembership);
   }
 
-  async refresh(refreshToken: string | undefined): Promise<AuthSession> {
+  async refresh(
+    refreshToken: string | undefined,
+    organization?: { organizationId?: string; organizationSlug?: string },
+  ): Promise<AuthSession> {
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token is required');
     }
@@ -107,7 +110,13 @@ export class AuthService {
       throw new UnauthorizedException('Refresh session is not valid');
     }
 
-    return this.createSession(user, this.selectMembership(user));
+    return this.createSession(
+      user,
+      this.selectMembership(user, {
+        id: organization?.organizationId ?? payload.organizationId,
+        slug: organization?.organizationSlug ?? payload.organizationSlug,
+      }),
+    );
   }
 
   async switchOrganization(
@@ -207,6 +216,8 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       platformRole: user.platformRole,
+      organizationId: activeMembership?.organization.id,
+      organizationSlug: activeMembership?.organization.slug,
     };
 
     const [accessToken, refreshToken] = await Promise.all([

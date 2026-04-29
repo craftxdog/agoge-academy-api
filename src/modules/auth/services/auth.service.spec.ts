@@ -120,6 +120,55 @@ describe('AuthService', () => {
     );
   });
 
+  it('preserves the active tenant when rotating a tenant-scoped refresh session', async () => {
+    const user = createUserRecord({
+      refreshTokenHash:
+        '2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b',
+      memberships: [
+        createUserRecord().memberships[0],
+        {
+          ...createUserRecord().memberships[0],
+          id: 'member-2',
+          organizationId: 'organization-2',
+          organization: {
+            ...createUserRecord().memberships[0].organization,
+            id: 'organization-2',
+            slug: 'tenant-two',
+            name: 'Tenant Two',
+          },
+        },
+      ],
+    });
+
+    authRepository.findUserById.mockResolvedValue(user);
+    jwtService.verifyAsync = jest.fn().mockResolvedValue({
+      tokenType: 'refresh',
+      sub: 'user-id',
+      email: 'founder@agoge.com',
+      platformRole: PlatformRole.USER,
+      organizationId: 'organization-2',
+      organizationSlug: 'tenant-two',
+    });
+    jwtService.signAsync = jest
+      .fn()
+      .mockResolvedValueOnce('new-access-token')
+      .mockResolvedValueOnce('new-refresh-token');
+
+    const result = await service.refresh('secret');
+
+    expect(result.activeMembership?.organization.id).toBe('organization-2');
+    expect(result.activeMembership?.organization.slug).toBe('tenant-two');
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        organizationId: 'organization-2',
+        organizationSlug: 'tenant-two',
+        tokenType: 'refresh',
+      }),
+      expect.any(Object),
+    );
+  });
+
   it('rejects switching organization without selector fields', async () => {
     await expect(
       service.switchOrganization('user-id', {}),
