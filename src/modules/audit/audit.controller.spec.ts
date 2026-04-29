@@ -32,7 +32,10 @@ describe('AuditController', () => {
   });
 
   it('delegates catalog requests', async () => {
-    const response = { actions: ['settings.updated'], entityTypes: ['setting'] };
+    const response = {
+      actions: ['settings.updated'],
+      entityTypes: ['setting'],
+    };
     auditService.getCatalog.mockResolvedValue(response);
 
     await expect(controller.getCatalog('organization-id')).resolves.toBe(
@@ -49,16 +52,19 @@ describe('AuditController', () => {
     await expect(
       controller.listLogs('organization-id', query as never),
     ).resolves.toBe(response);
-    expect(auditService.listLogs).toHaveBeenCalledWith('organization-id', query);
+    expect(auditService.listLogs).toHaveBeenCalledWith(
+      'organization-id',
+      query,
+    );
   });
 
   it('delegates log detail requests', async () => {
     const response = { id: 'audit-log-id' };
     auditService.getLog.mockResolvedValue(response);
 
-    await expect(controller.getLog('organization-id', 'audit-log-id')).resolves.toBe(
-      response,
-    );
+    await expect(
+      controller.getLog('organization-id', 'audit-log-id'),
+    ).resolves.toBe(response);
     expect(auditService.getLog).toHaveBeenCalledWith(
       'organization-id',
       'audit-log-id',
