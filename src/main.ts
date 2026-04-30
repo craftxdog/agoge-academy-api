@@ -25,7 +25,12 @@ async function bootstrap() {
   const accessLogMiddleware = new AccessLogMiddleware();
   app.use(accessLogMiddleware.use.bind(accessLogMiddleware));
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy:
+        process.env.NODE_ENV === 'production' ? undefined : false,
+    }),
+  );
 
   app.enableVersioning({
     type: VersioningType.URI,

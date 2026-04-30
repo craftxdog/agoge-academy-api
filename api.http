@@ -2,6 +2,8 @@
 
 @baseUrl = http://localhost:3000/api/v1
 @contentType = application/json
+@organizationId = organization-id
+@organizationSlug = agoge-academy
 
 ################################################
 
@@ -9,17 +11,22 @@
 
 ################################################
 
-### Register user
+### Register organization and founder
 
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/auth/register-organization
 Content-Type: {{contentType}}
 
 {
-"email": "[john.doe@example.com](mailto:john.doe@example.com)",
-"password": "password123",
-"username": "johndoe",
-"firstName": "John",
-"lastName": "Doe"
+  "organizationName": "Agoge Academy",
+  "organizationSlug": "{{organizationSlug}}",
+  "timezone": "America/Managua",
+  "locale": "es-NI",
+  "currency": "NIO",
+  "email": "founder@agoge.com",
+  "username": "founder",
+  "firstName": "Alex",
+  "lastName": "Founder",
+  "password": "SaaS-ready-password-2026!"
 }
 
 ### Login
@@ -30,8 +37,9 @@ POST {{baseUrl}}/auth/login
 Content-Type: {{contentType}}
 
 {
-"username": "johndoe",
-"password": "password123"
+  "email": "founder@agoge.com",
+  "password": "SaaS-ready-password-2026!",
+  "organizationSlug": "{{organizationSlug}}"
 }
 
 ### Save token
@@ -44,29 +52,74 @@ Content-Type: {{contentType}}
 
 ################################################
 
-### Get current user
+### Get current auth context
 
-GET {{baseUrl}}/users/me
-Authorization: Bearer {{accessToken}}
-
-### Get users (paginated)
-
-GET {{baseUrl}}/users?page=1&limit=10
+GET {{baseUrl}}/auth/me
 Authorization: Bearer {{accessToken}}
 
 ################################################
 
-# 📦 STORAGE
+# 📊 ANALYTICS
 
 ################################################
 
-### Upload file
+### Get operations analytics summary
 
-POST {{baseUrl}}/storage/upload
+GET {{baseUrl}}/analytics/operations
 Authorization: Bearer {{accessToken}}
-Content-Type: multipart/form-data
 
-< ./test-file.jpg
+################################################
+
+# 🔔 NOTIFICATIONS
+
+################################################
+
+### Get inbox summary
+
+GET {{baseUrl}}/notifications/summary
+Authorization: Bearer {{accessToken}}
+
+### Get historical inbox
+
+GET {{baseUrl}}/notifications?limit=10&sortBy=createdAt&sortDirection=desc
+Authorization: Bearer {{accessToken}}
+
+### Mark one notification as read
+
+PATCH {{baseUrl}}/notifications/notification-id/read
+Authorization: Bearer {{accessToken}}
+
+### Mark all notifications as read
+
+PATCH {{baseUrl}}/notifications/read-all
+Authorization: Bearer {{accessToken}}
+
+################################################
+
+# 💳 BILLING
+
+################################################
+
+### List payments
+
+GET {{baseUrl}}/billing/payments?limit=10
+Authorization: Bearer {{accessToken}}
+
+################################################
+
+# 🗓️ SCHEDULES
+
+################################################
+
+### Get effective day schedule
+
+GET {{baseUrl}}/schedules/day?date=2026-05-01
+Authorization: Bearer {{accessToken}}
+
+### List locations
+
+GET {{baseUrl}}/schedules/locations
+Authorization: Bearer {{accessToken}}
 
 ################################################
 
@@ -80,23 +133,23 @@ POST {{baseUrl}}/auth/login
 Content-Type: {{contentType}}
 
 {
-"username": "johndoe",
-"password": "wrongpassword"
+  "email": "founder@agoge.com",
+  "password": "wrongpassword"
 }
 
 ### Missing token
 
-GET {{baseUrl}}/users/me
+GET {{baseUrl}}/notifications/summary
 
 ### Invalid email
 
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/auth/register-organization
 Content-Type: {{contentType}}
 
 {
-"email": "invalid-email",
-"password": "password123",
-"username": "test",
-"firstName": "Test",
-"lastName": "User"
+  "organizationName": "Agoge Academy",
+  "email": "invalid-email",
+  "firstName": "Test",
+  "lastName": "User",
+  "password": "SaaS-ready-password-2026!"
 }

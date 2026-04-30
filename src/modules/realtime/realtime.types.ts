@@ -5,6 +5,7 @@ export const REALTIME_DOMAINS = [
   'analytics',
   'audit',
   'billing',
+  'notifications',
   'rbac',
   'schedules',
   'settings',

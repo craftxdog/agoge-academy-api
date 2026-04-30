@@ -2,15 +2,18 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import {
+  NotificationType,
   PaymentFrequency,
   PaymentStatus,
   PaymentTransactionStatus,
 } from 'generated/prisma/enums';
 import { PaginatedResult } from '../../../common';
+import { NotificationsService } from '../../notifications';
 import { RealtimeService } from '../../realtime';
 import {
   BillingCatalogQueryDto,
@@ -44,9 +47,12 @@ const TERMINAL_PAYMENT_STATUSES = [
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     private readonly billingRepository: BillingRepository,
     private readonly realtimeService: RealtimeService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listPaymentTypes(
@@ -386,24 +392,7 @@ export class BillingService {
     paymentId: string,
   ): Promise<PaymentResponseDto> {
     const payment = await this.getPaymentOrThrow(organizationId, paymentId);
-
-    const response = this.mapPayment(payment);
-
-    this.emitBillingEvent({
-      organizationId,
-      resource: 'payment',
-      action: 'created',
-      entityId: response.id,
-      data: response,
-      invalidate: [
-        'billing.payments',
-        'billing.summary',
-        'analytics.revenue',
-        'analytics.dashboard',
-      ],
-    });
-
-    return response;
+    return this.mapPayment(payment);
   }
 
   async createPayment(
@@ -443,7 +432,7 @@ export class BillingService {
     this.emitBillingEvent({
       organizationId,
       resource: 'payment',
-      action: 'updated',
+      action: 'created',
       entityId: response.id,
       data: response,
       invalidate: [
@@ -486,7 +475,23 @@ export class BillingService {
       metadata: dto.metadata,
     });
 
-    return this.mapPayment(payment);
+    const response = this.mapPayment(payment);
+
+    this.emitBillingEvent({
+      organizationId,
+      resource: 'payment',
+      action: 'updated',
+      entityId: response.id,
+      data: response,
+      invalidate: [
+        'billing.payments',
+        'billing.summary',
+        'analytics.revenue',
+        'analytics.dashboard',
+      ],
+    });
+
+    return response;
   }
 
   async createTransaction(
@@ -875,5 +880,148 @@ export class BillingService {
       data: params.data,
       invalidate: params.invalidate,
     });
+
+    const notification = this.buildBillingNotification(params);
+
+    void this.notificationsService
+      .createDomainNotification({
+        organizationId: params.organizationId,
+        sourceDomain: 'billing',
+        sourceResource: params.resource,
+        sourceAction: params.action,
+        sourceEntityId: params.entityId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        payload: params.data,
+      })
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Failed to persist billing notification for ${params.resource}.${params.action}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      });
+  }
+
+  private buildBillingNotification(params: {
+    resource: string;
+    action: string;
+    data: unknown;
+  }): {
+    type: NotificationType;
+    title: string;
+    message: string;
+  } {
+    const payment = this.extractPaymentLikeRecord(params.data);
+    const paymentIdentifier = this.resolvePaymentIdentifier(payment);
+    const memberName = this.resolvePersonName(payment?.member);
+
+    if (
+      payment?.status === PaymentStatus.OVERDUE ||
+      (params.resource === 'payment' && params.action === 'updated'
+        ? payment?.status === PaymentStatus.OVERDUE
+        : false)
+    ) {
+      return {
+        type: NotificationType.PAYMENT_OVERDUE,
+        title: 'Payment overdue',
+        message: memberName
+          ? `Payment ${paymentIdentifier} for ${memberName} is overdue and needs follow-up.`
+          : `Payment ${paymentIdentifier} is overdue and needs follow-up.`,
+      };
+    }
+
+    if (
+      payment?.status === PaymentStatus.PAID ||
+      (params.resource === 'transaction' && params.action === 'created')
+    ) {
+      return {
+        type: NotificationType.PAYMENT_PAID,
+        title: 'Payment activity recorded',
+        message: memberName
+          ? `Payment activity for ${paymentIdentifier} was recorded for ${memberName}.`
+          : `Payment activity for ${paymentIdentifier} was recorded successfully.`,
+      };
+    }
+
+    if (params.resource === 'payment' && params.action === 'created') {
+      return {
+        type: NotificationType.PAYMENT_CREATED,
+        title: 'Payment created',
+        message: memberName
+          ? `Payment ${paymentIdentifier} was created for ${memberName}.`
+          : `Payment ${paymentIdentifier} was created successfully.`,
+      };
+    }
+
+    return {
+      type: NotificationType.SYSTEM_MESSAGE,
+      title: `${this.humanizeLabel(params.resource)} ${this.humanizeAction(params.action)}`,
+      message: `Billing ${this.humanizeLabel(params.resource).toLowerCase()} was ${this.humanizeAction(params.action).toLowerCase()} in the tenant inbox.`,
+    };
+  }
+
+  private extractPaymentLikeRecord(
+    data: unknown,
+  ): Record<string, unknown> | null {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+
+    if ('payment' in data && data.payment && typeof data.payment === 'object') {
+      return data.payment as Record<string, unknown>;
+    }
+
+    return data as Record<string, unknown>;
+  }
+
+  private resolvePaymentIdentifier(
+    payment: Record<string, unknown> | null,
+  ): string {
+    if (!payment) {
+      return 'the payment record';
+    }
+
+    if (typeof payment.invoiceNumber === 'string' && payment.invoiceNumber) {
+      return payment.invoiceNumber;
+    }
+
+    if (typeof payment.id === 'string' && payment.id) {
+      return payment.id;
+    }
+
+    return 'the payment record';
+  }
+
+  private resolvePersonName(person: unknown): string | null {
+    if (!person || typeof person !== 'object') {
+      return null;
+    }
+
+    const firstName =
+      typeof (person as Record<string, unknown>).firstName === 'string'
+        ? (person as Record<string, unknown>).firstName
+        : null;
+    const lastName =
+      typeof (person as Record<string, unknown>).lastName === 'string'
+        ? (person as Record<string, unknown>).lastName
+        : null;
+    const name = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    return name || null;
+  }
+
+  private humanizeLabel(value: string): string {
+    return value
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private humanizeAction(value: string): string {
+    return value
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }

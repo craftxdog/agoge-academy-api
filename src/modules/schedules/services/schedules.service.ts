@@ -2,8 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { NotificationType } from 'generated/prisma/enums';
+import { NotificationsService } from '../../notifications';
 import {
   BusinessHourQueryDto,
   BusinessHourResponseDto,
@@ -58,9 +61,12 @@ type TimeWindow = {
 
 @Injectable()
 export class SchedulesService {
+  private readonly logger = new Logger(SchedulesService.name);
+
   constructor(
     private readonly schedulesRepository: SchedulesRepository,
     private readonly realtimeService: RealtimeService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async listLocations(
@@ -1227,5 +1233,89 @@ export class SchedulesService {
       data: params.data,
       invalidate: params.invalidate,
     });
+
+    const notification = this.buildSchedulesNotification(params);
+
+    void this.notificationsService
+      .createDomainNotification({
+        organizationId: params.organizationId,
+        sourceDomain: 'schedules',
+        sourceResource: params.resource,
+        sourceAction: params.action,
+        sourceEntityId: params.entityId,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        payload: params.data,
+      })
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Failed to persist schedules notification for ${params.resource}.${params.action}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      });
+  }
+
+  private buildSchedulesNotification(params: {
+    resource: string;
+    action: string;
+    data: unknown;
+  }): {
+    type: NotificationType;
+    title: string;
+    message: string;
+  } {
+    const record =
+      params.data && typeof params.data === 'object'
+        ? (params.data as Record<string, unknown>)
+        : null;
+    const locationName =
+      typeof record?.name === 'string'
+        ? record.name
+        : typeof record?.dayName === 'string'
+          ? record.dayName
+          : typeof record?.member === 'object' && record.member
+            ? this.resolveScheduleMemberName(record.member)
+            : null;
+
+    return {
+      type: NotificationType.SYSTEM_MESSAGE,
+      title: `${this.humanizeLabel(params.resource)} ${this.humanizeAction(params.action)}`,
+      message: locationName
+        ? `${this.humanizeLabel(params.resource)} ${locationName} was ${this.humanizeAction(params.action).toLowerCase()} in schedules.`
+        : `Schedules ${this.humanizeLabel(params.resource).toLowerCase()} was ${this.humanizeAction(params.action).toLowerCase()} successfully.`,
+    };
+  }
+
+  private resolveScheduleMemberName(value: unknown): string | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const firstName =
+      typeof (value as Record<string, unknown>).firstName === 'string'
+        ? (value as Record<string, unknown>).firstName
+        : null;
+    const lastName =
+      typeof (value as Record<string, unknown>).lastName === 'string'
+        ? (value as Record<string, unknown>).lastName
+        : null;
+    const name = [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    return name || null;
+  }
+
+  private humanizeLabel(value: string): string {
+    return value
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  private humanizeAction(value: string): string {
+    return value
+      .split('-')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 }

@@ -3,6 +3,7 @@ import { Prisma } from 'generated/prisma/client';
 import {
   InvitationStatus,
   MemberStatus,
+  NotificationType,
   PaymentStatus,
   PaymentTransactionStatus,
 } from 'generated/prisma/enums';
@@ -69,6 +70,15 @@ export type AnalyticsCatalogRecord = {
   id: string;
   key: string;
   name: string;
+};
+
+export type AnalyticsNotificationRecord = {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: Date;
 };
 
 @Injectable()
@@ -301,6 +311,27 @@ export class AnalyticsRepository {
         organizationId,
         isRead: false,
       },
+    });
+  }
+
+  findRecentNotifications(
+    organizationId: string,
+    limit: number,
+  ): Promise<AnalyticsNotificationRecord[]> {
+    return this.prisma.notification.findMany({
+      where: {
+        organizationId,
+      },
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        message: true,
+        isRead: true,
+        createdAt: true,
+      },
+      take: limit,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
   }
 

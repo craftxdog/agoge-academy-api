@@ -210,6 +210,7 @@ export class AnalyticsService {
       memberScheduleWindows,
       scheduledMembers,
       unreadNotifications,
+      recentNotifications,
       upcomingExceptions,
       auditEvents,
       topAuditActions,
@@ -222,6 +223,7 @@ export class AnalyticsService {
       this.analyticsRepository.countMemberScheduleWindows(organizationId),
       this.analyticsRepository.countScheduledMembers(organizationId),
       this.analyticsRepository.countUnreadNotifications(organizationId),
+      this.analyticsRepository.findRecentNotifications(organizationId, 5),
       this.analyticsRepository.countUpcomingExceptions(
         organizationId,
         range.start,
@@ -261,6 +263,14 @@ export class AnalyticsService {
       enabledModulesCount: enabledModules.length,
       enabledModules: enabledModules.map((module) => module.key),
       topAuditActions: this.buildTopAuditActions(topAuditActions, range.top),
+      recentNotifications: recentNotifications.map((notification) => ({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+      })),
     };
   }
 

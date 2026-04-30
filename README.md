@@ -2,28 +2,24 @@
 
 Backend API for **Agoge Academy**, built with NestJS and TypeScript.
 
-This repository is currently in its foundation stage: the NestJS application, testing setup, linting, commit standards, API versioning, Swagger docs, security middleware, Prisma setup, issue templates, pull request template, and CI/CD workflow structure are in place. Domain modules such as authentication, users, storage, analytics, and production deployment are planned but not implemented yet.
+The API is already operating as a modular multi-tenant SaaS backend with tenant-aware authentication, RBAC, settings, analytics, billing, schedules, shared notifications, audit logs, and Socket.IO realtime events.
 
 ## Current Status
 
-- NestJS application scaffold
-- TypeScript configuration
-- ESLint 9 flat config
-- Prettier configuration
-- Jest unit and E2E test setup
-- Prisma 7 setup with PostgreSQL datasource
-- Initial user schema and migration
-- URI API versioning under `/api/v1`
+- Multi-tenant NestJS API under `/api/v1`
+- JWT auth with organization switching and refresh rotation
+- Tenant context guards for modules, roles and permissions
+- Prisma 7 schema with organizations, members, roles, schedules, billing, notifications and audit
+- Billing module with payment types, payment methods, payments, transactions and operational summary
+- Schedules module with locations, business hours, exceptions, member availability and effective day planning
+- Settings module with branding, organization settings, enabled modules and screen visibility
+- Users module with members, invitations and tenant membership management
+- RBAC module for tenant roles and permissions
+- Analytics module with revenue, members, operations, dashboard and catalog endpoints
+- Notifications module with shared inbox history, unread summary and read actions
+- Socket.IO realtime namespace with domain events and cache invalidation envelopes
 - Swagger/OpenAPI docs in non-production environments
-- Global validation pipe, HTTP exception filter, and response transform interceptor
-- Helmet, cookie parser, and CORS bootstrap configuration
-- Commitlint conventional commit rules
-- GitHub issue templates for API bugs and backend feature requests
-- Pull request template focused on backend/API review
-- Reusable CI workflow for lint, build, test, and optional Docker validation
-- Staging and production deployment workflow skeletons with preflight checks
-- Scheduled maintenance workflow for dependency audit, Docker scan, and stale branch reporting
-- Production Dockerfile and local Docker Compose setup
+- Jest unit and E2E coverage, ESLint, Prettier and Docker support
 
 ## Tech Stack
 
@@ -70,6 +66,34 @@ Swagger docs are available outside production at:
 ```text
 http://localhost:3000/api/v1/docs
 ```
+
+## Core Modules
+
+- `auth`: register organization, login, refresh, logout, active tenant context
+- `users`: members and invitations
+- `rbac`: tenant roles and permissions
+- `settings`: branding, preferences, modules and screens
+- `billing`: payment catalog, invoices and transactions
+- `schedules`: locations, hours, exceptions and member schedules
+- `notifications`: shared tenant inbox with history and unread tracking
+- `analytics`: dashboard, revenue, members, operations and catalog
+- `audit`: operational history queries
+- `realtime`: Socket.IO namespace `/realtime`
+
+## Notifications And Realtime
+
+- Historical inbox API: `GET /api/v1/notifications`
+- Inbox summary for dropdowns: `GET /api/v1/notifications/summary`
+- Shared read actions: `PATCH /api/v1/notifications/:notificationId/read` and `PATCH /api/v1/notifications/read-all`
+- Analytics operations summary also exposes `unreadNotifications` and `recentNotifications`
+- Realtime namespace: `/realtime`
+- Generic event name: `realtime.event`
+- Current persistent inbox producers: `billing` and `schedules`
+
+See:
+
+- [docs/REALTIME_SOCKET_IO.md](/Users/craftzdog/Documents/Projects/agoge-api/docs/REALTIME_SOCKET_IO.md)
+- [docs/NOTIFICATIONS_API.md](/Users/craftzdog/Documents/Projects/agoge-api/docs/NOTIFICATIONS_API.md)
 
 ## Scripts
 
@@ -140,11 +164,11 @@ GitHub Actions workflows are configured for:
 
 Docker deployment workflows include preflight checks and publish images only after CI passes.
 
-## Roadmap
+## Operations Notes
 
-- Implement authentication and authorization
-- Implement user management
-- Add real staging and production deployment targets
+- Swagger is enabled outside production.
+- In local development, `helmet` disables CSP only outside production to avoid blocking local tooling and docs.
+- Realtime and notifications are tenant-scoped. The inbox is shared per organization, not per individual user.
 
 ## Contributing
 

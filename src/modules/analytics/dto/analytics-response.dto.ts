@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { NotificationType } from 'generated/prisma/enums';
 
 export class AnalyticsRangeResponseDto {
   @ApiProperty({ example: '2026-04-01T00:00:00.000Z' })
@@ -145,6 +146,28 @@ export class AnalyticsMemberResponseDto {
   trend: AnalyticsTrendPointDto[];
 }
 
+export class AnalyticsRecentNotificationDto {
+  @ApiProperty({ example: '7ce9fdf3-9555-4f43-a676-390bd78dbe6a' })
+  id: string;
+
+  @ApiProperty({ enum: NotificationType, example: 'PAYMENT_CREATED' })
+  type: NotificationType;
+
+  @ApiProperty({ example: 'Payment created' })
+  title: string;
+
+  @ApiProperty({
+    example: 'Invoice INV-202604-000001 was created for Alex Athlete.',
+  })
+  message: string;
+
+  @ApiProperty({ example: false })
+  isRead: boolean;
+
+  @ApiProperty({ example: '2026-04-20T00:00:00.000Z' })
+  createdAt: Date;
+}
+
 export class AnalyticsOperationsResponseDto {
   @ApiProperty({ type: AnalyticsRangeResponseDto })
   range: AnalyticsRangeResponseDto;
@@ -184,6 +207,9 @@ export class AnalyticsOperationsResponseDto {
 
   @ApiProperty({ type: [AnalyticsDimensionCountDto] })
   topAuditActions: AnalyticsDimensionCountDto[];
+
+  @ApiProperty({ type: [AnalyticsRecentNotificationDto] })
+  recentNotifications: AnalyticsRecentNotificationDto[];
 }
 
 export class AnalyticsOverviewCardDto {

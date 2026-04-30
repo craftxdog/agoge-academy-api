@@ -6,6 +6,7 @@ import { AnalyticsModule } from './modules/analytics';
 import { AuditModule } from './modules/audit';
 import { AuthModule } from './modules/auth';
 import { BillingModule } from './modules/billing';
+import { NotificationsModule } from './modules/notifications';
 import { RealtimeModule } from './modules/realtime';
 import { RbacModule } from './modules/rbac';
 import { SchedulesModule } from './modules/schedules';
@@ -22,6 +23,7 @@ import { UsersModule } from './modules/users';
     RbacModule,
     UsersModule,
     SettingsModule,
+    NotificationsModule,
     BillingModule,
     SchedulesModule,
   ],

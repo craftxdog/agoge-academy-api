@@ -140,11 +140,21 @@ describe('BillingService', () => {
   const realtimeService = {
     publishOrganizationEvent: jest.fn(),
   };
+  const notificationsService = {
+    createDomainNotification: jest.fn(),
+  };
   let service: BillingService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new BillingService(repository as never, realtimeService as never);
+    notificationsService.createDomainNotification.mockResolvedValue({
+      id: 'notification-id',
+    });
+    service = new BillingService(
+      repository as never,
+      realtimeService as never,
+      notificationsService as never,
+    );
   });
 
   it('requires amount when no payment type default exists', async () => {
@@ -241,5 +251,44 @@ describe('BillingService', () => {
     );
     expect(result.status).toBe(PaymentStatus.PAID);
     expect(result.balance).toBe('0.00');
+  });
+
+  it('emits payment.created when a payment is created', async () => {
+    repository.findMember.mockResolvedValue(createMemberRecord());
+    repository.createPayment.mockResolvedValue(createPaymentRecord());
+
+    await service.createPayment('organization-id', {
+      memberId: 'member-id',
+      amount: '45.00',
+      dueDate: '2026-04-30',
+    });
+
+    expect(realtimeService.publishOrganizationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        domain: 'billing',
+        resource: 'payment',
+        action: 'created',
+      }),
+    );
+    expect(notificationsService.createDomainNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        sourceDomain: 'billing',
+        sourceResource: 'payment',
+        sourceAction: 'created',
+      }),
+    );
+  });
+
+  it('does not emit realtime when reading one payment', async () => {
+    repository.findPaymentById.mockResolvedValue(createPaymentRecord());
+
+    await service.getPayment('organization-id', 'payment-id');
+
+    expect(realtimeService.publishOrganizationEvent).not.toHaveBeenCalled();
+    expect(
+      notificationsService.createDomainNotification,
+    ).not.toHaveBeenCalled();
   });
 });

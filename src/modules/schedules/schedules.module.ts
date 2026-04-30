@@ -7,12 +7,13 @@ import {
   TenantGuard,
 } from '../../common';
 import { PrismaModule } from '../../database/prisma.module';
+import { NotificationsModule } from '../notifications';
 import { SchedulesRepository } from './repositories';
 import { SchedulesController } from './schedules.controller';
 import { SchedulesService } from './services';
 
 @Module({
-  imports: [PrismaModule, JwtModule.register({})],
+  imports: [PrismaModule, JwtModule.register({}), NotificationsModule],
   controllers: [SchedulesController],
   providers: [
     SchedulesRepository,

@@ -126,13 +126,20 @@ describe('SchedulesService', () => {
   const realtimeService = {
     publishOrganizationEvent: jest.fn(),
   };
+  const notificationsService = {
+    createDomainNotification: jest.fn(),
+  };
   let service: SchedulesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    notificationsService.createDomainNotification.mockResolvedValue({
+      id: 'notification-id',
+    });
     service = new SchedulesService(
       repository as never,
       realtimeService as never,
+      notificationsService as never,
     );
   });
 
@@ -238,6 +245,14 @@ describe('SchedulesService', () => {
         domain: 'schedules',
         resource: 'location',
         action: 'created',
+      }),
+    );
+    expect(notificationsService.createDomainNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'organization-id',
+        sourceDomain: 'schedules',
+        sourceResource: 'location',
+        sourceAction: 'created',
       }),
     );
   });

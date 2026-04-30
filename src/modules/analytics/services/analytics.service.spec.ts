@@ -27,6 +27,7 @@ describe('AnalyticsService', () => {
     countMemberScheduleWindows: jest.fn(),
     countScheduledMembers: jest.fn(),
     countUnreadNotifications: jest.fn(),
+    findRecentNotifications: jest.fn(),
     countUpcomingExceptions: jest.fn(),
     countAuditEventsBetween: jest.fn(),
     findAuditActionsBetween: jest.fn(),
@@ -119,6 +120,16 @@ describe('AnalyticsService', () => {
     repository.countMemberScheduleWindows.mockResolvedValue(8);
     repository.countScheduledMembers.mockResolvedValue(1);
     repository.countUnreadNotifications.mockResolvedValue(22);
+    repository.findRecentNotifications.mockResolvedValue([
+      {
+        id: 'notification-1',
+        type: 'PAYMENT_CREATED',
+        title: 'Payment created',
+        message: 'Invoice INV-202604-000001 was created.',
+        isRead: false,
+        createdAt: new Date('2026-04-20T12:00:00.000Z'),
+      },
+    ]);
     repository.countUpcomingExceptions.mockResolvedValue(2);
     repository.countAuditEventsBetween.mockResolvedValue(55);
     repository.findAuditActionsBetween.mockResolvedValue([
@@ -148,6 +159,7 @@ describe('AnalyticsService', () => {
       'users',
       'analytics',
     ]);
+    expect(result.operations.recentNotifications).toHaveLength(1);
     expect(
       result.insights.some((item) => item.metricKey === 'overdueAmount'),
     ).toBe(true);
