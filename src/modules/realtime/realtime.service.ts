@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import {
   REALTIME_GENERIC_EVENT,
+  realtimeMemberRoom,
   realtimeOrganizationRoom,
+  realtimeUserRoom,
 } from '../../common/constants/realtime.constant';
 import {
   PublishOrganizationEventParams,
@@ -26,6 +28,40 @@ export class RealtimeService {
   ): RealtimeEventEnvelope<T> {
     const envelope = this.createEnvelope(params);
     const room = realtimeOrganizationRoom(params.organizationId);
+
+    this.server?.to(room).emit(envelope.name, envelope);
+    this.server?.to(room).emit(REALTIME_GENERIC_EVENT, envelope);
+
+    return envelope;
+  }
+
+  publishMemberEvent<T>(
+    organizationId: string,
+    memberId: string,
+    params: Omit<PublishOrganizationEventParams<T>, 'organizationId'>,
+  ): RealtimeEventEnvelope<T> {
+    const envelope = this.createEnvelope({
+      ...params,
+      organizationId,
+    });
+    const room = realtimeMemberRoom(memberId);
+
+    this.server?.to(room).emit(envelope.name, envelope);
+    this.server?.to(room).emit(REALTIME_GENERIC_EVENT, envelope);
+
+    return envelope;
+  }
+
+  publishUserEvent<T>(
+    organizationId: string,
+    userId: string,
+    params: Omit<PublishOrganizationEventParams<T>, 'organizationId'>,
+  ): RealtimeEventEnvelope<T> {
+    const envelope = this.createEnvelope({
+      ...params,
+      organizationId,
+    });
+    const room = realtimeUserRoom(userId);
 
     this.server?.to(room).emit(envelope.name, envelope);
     this.server?.to(room).emit(REALTIME_GENERIC_EVENT, envelope);

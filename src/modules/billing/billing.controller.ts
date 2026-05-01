@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  CurrentMember,
   CurrentOrganization,
   JwtAuthGuard,
   ModulesGuard,
@@ -56,6 +57,77 @@ import { BillingService } from './services/billing.service';
 @RequireModules(SYSTEM_MODULES.billing)
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
+
+  @Get('me/summary')
+  @Permissions(SYSTEM_PERMISSIONS.billingSelfRead)
+  @ApiOperation({
+    summary: 'Get current member billing summary',
+    description:
+      'Returns open balances, overdue balances and paid amount for the authenticated member only.',
+  })
+  @ApiOkResponse({ type: BillingSummaryResponseDto })
+  getMemberSummary(
+    @CurrentOrganization('id') organizationId: string,
+    @CurrentMember('id') memberId: string,
+  ) {
+    return this.billingService.getMemberSummary(organizationId, memberId);
+  }
+
+  @Get('me/payments')
+  @Permissions(SYSTEM_PERMISSIONS.billingSelfRead)
+  @ApiOperation({
+    summary: 'List current member payments',
+    description:
+      'Returns the authenticated member payment history without exposing other tenant members.',
+  })
+  @ApiOkResponse({ type: [PaymentResponseDto] })
+  listMemberPayments(
+    @CurrentOrganization('id') organizationId: string,
+    @CurrentMember('id') memberId: string,
+    @Query() query: PaymentQueryDto,
+  ) {
+    return this.billingService.listMemberPayments(
+      organizationId,
+      memberId,
+      query,
+    );
+  }
+
+  @Get('me/payments/:paymentId')
+  @Permissions(SYSTEM_PERMISSIONS.billingSelfRead)
+  @ApiOperation({ summary: 'Get current member payment detail' })
+  @ApiParam({ name: 'paymentId', format: 'uuid' })
+  @ApiOkResponse({ type: PaymentResponseDto })
+  getMemberPayment(
+    @CurrentOrganization('id') organizationId: string,
+    @CurrentMember('id') memberId: string,
+    @Param('paymentId') paymentId: string,
+  ) {
+    return this.billingService.getMemberPayment(
+      organizationId,
+      memberId,
+      paymentId,
+    );
+  }
+
+  @Get('me/payments/:paymentId/transactions')
+  @Permissions(SYSTEM_PERMISSIONS.billingSelfRead)
+  @ApiOperation({ summary: 'List current member payment transactions' })
+  @ApiParam({ name: 'paymentId', format: 'uuid' })
+  @ApiOkResponse({ type: [PaymentTransactionResponseDto] })
+  listMemberTransactions(
+    @CurrentOrganization('id') organizationId: string,
+    @CurrentMember('id') memberId: string,
+    @Param('paymentId') paymentId: string,
+    @Query() query: PaymentTransactionQueryDto,
+  ) {
+    return this.billingService.listMemberTransactions(
+      organizationId,
+      memberId,
+      paymentId,
+      query,
+    );
+  }
 
   @Get('summary')
   @Permissions(SYSTEM_PERMISSIONS.billingRead)

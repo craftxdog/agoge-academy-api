@@ -27,13 +27,22 @@ export const SYSTEM_PERMISSIONS = {
   usersRead: 'users.read',
   usersWrite: 'users.write',
   billingRead: 'billing.read',
+  billingSelfRead: 'billing.self.read',
   billingWrite: 'billing.write',
   schedulesRead: 'schedules.read',
+  schedulesSelfRead: 'schedules.self.read',
   schedulesWrite: 'schedules.write',
   notificationsRead: 'notifications.read',
+  notificationsSelfRead: 'notifications.self.read',
   auditRead: 'audit.read',
   analyticsRead: 'analytics.read',
 } as const;
+
+export const DEFAULT_CUSTOMER_PERMISSION_KEYS = [
+  SYSTEM_PERMISSIONS.billingSelfRead,
+  SYSTEM_PERMISSIONS.schedulesSelfRead,
+  SYSTEM_PERMISSIONS.notificationsSelfRead,
+] as const;
 
 export type SystemModule = (typeof SYSTEM_MODULES)[keyof typeof SYSTEM_MODULES];
 export type SystemRole = (typeof SYSTEM_ROLES)[keyof typeof SYSTEM_ROLES];

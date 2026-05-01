@@ -24,20 +24,29 @@ const createNotificationRecord = (overrides: Record<string, unknown> = {}) => ({
 describe('NotificationsService', () => {
   const repository = {
     findNotificationsPage: jest.fn(),
+    findMemberNotificationsPage: jest.fn(),
     findNotificationById: jest.fn(),
+    findMemberNotificationById: jest.fn(),
     createNotification: jest.fn(),
     updateNotificationReadState: jest.fn(),
     markAllAsRead: jest.fn(),
+    markAllMemberAsRead: jest.fn(),
     countUnread: jest.fn(),
+    countMemberUnread: jest.fn(),
     findRecent: jest.fn(),
+    findMemberRecent: jest.fn(),
+    isModuleEnabled: jest.fn(),
   };
   const realtimeService = {
     publishOrganizationEvent: jest.fn(),
+    publishMemberEvent: jest.fn(),
+    publishUserEvent: jest.fn(),
   };
   let service: NotificationsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    repository.isModuleEnabled.mockResolvedValue(true);
     service = new NotificationsService(
       repository as never,
       realtimeService as never,
@@ -110,6 +119,54 @@ describe('NotificationsService', () => {
         organizationId: 'organization-id',
         domain: 'notifications',
         resource: 'notification',
+        action: 'created',
+      }),
+    );
+  });
+
+  it('returns member activity summary', async () => {
+    repository.countMemberUnread.mockResolvedValue(2);
+    repository.findMemberRecent.mockResolvedValue([
+      createNotificationRecord({ memberId: 'member-id' }),
+    ]);
+
+    const result = await service.getActivitySummary(
+      'organization-id',
+      'member-id',
+    );
+
+    expect(result.unreadCount).toBe(2);
+    expect(result.recent).toHaveLength(1);
+  });
+
+  it('creates member activity notifications even when the inbox module is disabled', async () => {
+    repository.isModuleEnabled.mockResolvedValue(false);
+    repository.createNotification.mockResolvedValue(
+      createNotificationRecord({
+        id: 'activity-notification-id',
+        memberId: 'member-id',
+      }),
+    );
+
+    const result = await service.createDomainNotification({
+      organizationId: 'organization-id',
+      memberId: 'member-id',
+      sourceDomain: 'billing',
+      sourceResource: 'payment',
+      sourceAction: 'created',
+      type: NotificationType.PAYMENT_CREATED,
+      title: 'Payment created',
+      message: 'Invoice INV-202604-000001 was created.',
+    });
+
+    expect(result.id).toBe('activity-notification-id');
+    expect(realtimeService.publishOrganizationEvent).not.toHaveBeenCalled();
+    expect(realtimeService.publishMemberEvent).toHaveBeenCalledWith(
+      'organization-id',
+      'member-id',
+      expect.objectContaining({
+        domain: 'notifications',
+        resource: 'activity',
         action: 'created',
       }),
     );

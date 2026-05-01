@@ -468,6 +468,13 @@ export class UsersService {
             normalizedRoleKeys,
           )
         : await this.usersRepository.findDefaultRoleIds(organizationId);
+
+    if (normalizedRoleKeys.length === 0 && roles.length === 0) {
+      throw new BadRequestException(
+        'No default role is configured for this tenant',
+      );
+    }
+
     const missingRoleKeys = normalizedRoleKeys.filter(
       (roleKey) => !roles.some((role) => role.key === roleKey),
     );

@@ -586,6 +586,14 @@ export class SchedulesService {
     return schedules.map((schedule) => this.mapMemberSchedule(schedule));
   }
 
+  listCurrentMemberSchedules(
+    organizationId: string,
+    memberId: string,
+    query: MemberScheduleQueryDto,
+  ): Promise<MemberScheduleResponseDto[]> {
+    return this.listMemberSchedules(organizationId, memberId, query);
+  }
+
   async createMemberSchedule(
     organizationId: string,
     memberId: string,
@@ -1235,10 +1243,12 @@ export class SchedulesService {
     });
 
     const notification = this.buildSchedulesNotification(params);
+    const activityMemberId = this.resolveActivityMemberId(params.data);
 
     void this.notificationsService
       .createDomainNotification({
         organizationId: params.organizationId,
+        memberId: activityMemberId,
         sourceDomain: 'schedules',
         sourceResource: params.resource,
         sourceAction: params.action,
@@ -1285,6 +1295,20 @@ export class SchedulesService {
         ? `${this.humanizeLabel(params.resource)} ${locationName} was ${this.humanizeAction(params.action).toLowerCase()} in schedules.`
         : `Schedules ${this.humanizeLabel(params.resource).toLowerCase()} was ${this.humanizeAction(params.action).toLowerCase()} successfully.`,
     };
+  }
+
+  private resolveActivityMemberId(data: unknown): string | null {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+
+    const record = data as Record<string, unknown>;
+    const member =
+      typeof record.member === 'object' && record.member
+        ? (record.member as Record<string, unknown>)
+        : null;
+
+    return typeof member?.id === 'string' ? member.id : null;
   }
 
   private resolveScheduleMemberName(value: unknown): string | null {

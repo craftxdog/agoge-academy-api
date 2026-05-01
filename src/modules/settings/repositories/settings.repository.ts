@@ -230,6 +230,14 @@ export class SettingsRepository {
       }
 
       if (params.dto.isEnabled === true) {
+        await tx.organizationScreen.updateMany({
+          where: {
+            organizationId: params.organizationId,
+            moduleId: appModule.id,
+          },
+          data: { isVisible: true },
+        });
+
         await tx.organizationScreen.createMany({
           data: appModule.screens.map((screen) => ({
             organizationId: params.organizationId,

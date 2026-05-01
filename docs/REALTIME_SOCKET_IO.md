@@ -59,6 +59,9 @@ Notification-specific examples:
 - `notifications.notification.created`
 - `notifications.notification.read`
 - `notifications.inbox.read-all`
+- `notifications.activity.created`
+- `notifications.activity.read`
+- `notifications.activity.read-all`
 
 ## Event Envelope
 
@@ -97,7 +100,7 @@ Persistent inbox notifications are currently produced from:
 - `billing`
 - `schedules`
 
-Those writes generate both their original domain event and a `notifications.*` event so the frontend can refresh dropdowns or inbox views from either stream.
+Those writes generate both their original domain event and `notifications.*` events so the frontend can refresh shared inbox or member activity views from either stream.
 
 ## Frontend Example
 
@@ -136,4 +139,5 @@ const syncRealtime = (nextAccessToken: string) => {
 - Use realtime events to refresh caches, notify active views, and update operational dashboards.
 - Call `realtime.sync` after login, token refresh, logout/login transitions, or tenant switches.
 - Prefer consuming `realtime.event` for generic invalidation and specific event names for targeted UI reactions.
-- For historical bell dropdowns, pair realtime updates with `GET /api/v1/notifications/summary` or `GET /api/v1/analytics/operations`.
+- For shared operational inboxes, pair realtime updates with `GET /api/v1/notifications/summary` or `GET /api/v1/analytics/operations`.
+- For self-service activity centers, pair realtime updates with `GET /api/v1/activity/summary`.

@@ -21,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  CurrentMember,
   CurrentOrganization,
   JwtAuthGuard,
   ModulesGuard,
@@ -62,6 +63,26 @@ import { SchedulesService } from './services';
 @RequireModules(SYSTEM_MODULES.schedules)
 export class SchedulesController {
   constructor(private readonly schedulesService: SchedulesService) {}
+
+  @Get('me/availability')
+  @Permissions(SYSTEM_PERMISSIONS.schedulesSelfRead)
+  @ApiOperation({
+    summary: 'List current member availability',
+    description:
+      'Returns the authenticated member availability windows without exposing other tenant schedules.',
+  })
+  @ApiOkResponse({ type: [MemberScheduleResponseDto] })
+  listCurrentMemberSchedules(
+    @CurrentOrganization('id') organizationId: string,
+    @CurrentMember('id') memberId: string,
+    @Query() query: MemberScheduleQueryDto,
+  ) {
+    return this.schedulesService.listCurrentMemberSchedules(
+      organizationId,
+      memberId,
+      query,
+    );
+  }
 
   @Get('day')
   @Permissions(SYSTEM_PERMISSIONS.schedulesRead)

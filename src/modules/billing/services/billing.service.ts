@@ -387,11 +387,36 @@ export class BillingService {
     };
   }
 
+  listMemberPayments(
+    organizationId: string,
+    memberId: string,
+    query: PaymentQueryDto,
+  ): Promise<PaginatedResult<PaymentResponseDto>> {
+    return this.listPayments(organizationId, {
+      ...query,
+      memberId,
+    });
+  }
+
   async getPayment(
     organizationId: string,
     paymentId: string,
   ): Promise<PaymentResponseDto> {
     const payment = await this.getPaymentOrThrow(organizationId, paymentId);
+    return this.mapPayment(payment);
+  }
+
+  async getMemberPayment(
+    organizationId: string,
+    memberId: string,
+    paymentId: string,
+  ): Promise<PaymentResponseDto> {
+    const payment = await this.getMemberPaymentOrThrow(
+      organizationId,
+      memberId,
+      paymentId,
+    );
+
     return this.mapPayment(payment);
   }
 
@@ -598,12 +623,63 @@ export class BillingService {
     return transactions.map((transaction) => this.mapTransaction(transaction));
   }
 
+  async listMemberTransactions(
+    organizationId: string,
+    memberId: string,
+    paymentId: string,
+    query: PaymentTransactionQueryDto,
+  ): Promise<PaymentTransactionResponseDto[]> {
+    await this.getMemberPaymentOrThrow(organizationId, memberId, paymentId);
+    return this.listTransactions(organizationId, paymentId, query);
+  }
+
   async getSummary(organizationId: string): Promise<BillingSummaryResponseDto> {
     const [openPayments, paidThisMonth] = await Promise.all([
       this.billingRepository.findOpenPayments(organizationId),
       this.billingRepository.findPaidPaymentsSince(
         organizationId,
         this.getStartOfMonth(),
+      ),
+    ]);
+    const now = Date.now();
+    const overduePayments = openPayments.filter(
+      (payment) => payment.dueDate.getTime() < now,
+    );
+
+    return {
+      openPayments: openPayments.length,
+      openBalance: this.formatCents(
+        openPayments.reduce(
+          (total, payment) => total + this.getBalanceCents(payment),
+          0,
+        ),
+      ),
+      overduePayments: overduePayments.length,
+      overdueBalance: this.formatCents(
+        overduePayments.reduce(
+          (total, payment) => total + this.getBalanceCents(payment),
+          0,
+        ),
+      ),
+      paidThisMonth: this.formatCents(
+        paidThisMonth.reduce(
+          (total, payment) => total + this.getPaidAmountCents(payment),
+          0,
+        ),
+      ),
+    };
+  }
+
+  async getMemberSummary(
+    organizationId: string,
+    memberId: string,
+  ): Promise<BillingSummaryResponseDto> {
+    const [openPayments, paidThisMonth] = await Promise.all([
+      this.billingRepository.findOpenPayments(organizationId, memberId),
+      this.billingRepository.findPaidPaymentsSince(
+        organizationId,
+        this.getStartOfMonth(),
+        memberId,
       ),
     ]);
     const now = Date.now();
@@ -680,6 +756,20 @@ export class BillingService {
 
     if (!payment) {
       throw new NotFoundException('Payment was not found in this tenant');
+    }
+
+    return payment;
+  }
+
+  private async getMemberPaymentOrThrow(
+    organizationId: string,
+    memberId: string,
+    paymentId: string,
+  ): Promise<BillingPaymentRecord> {
+    const payment = await this.getPaymentOrThrow(organizationId, paymentId);
+
+    if (payment.member.id !== memberId) {
+      throw new NotFoundException('Payment was not found in this member scope');
     }
 
     return payment;
@@ -882,10 +972,12 @@ export class BillingService {
     });
 
     const notification = this.buildBillingNotification(params);
+    const activityMemberId = this.resolveActivityMemberId(params.data);
 
     void this.notificationsService
       .createDomainNotification({
         organizationId: params.organizationId,
+        memberId: activityMemberId,
         sourceDomain: 'billing',
         sourceResource: params.resource,
         sourceAction: params.action,
@@ -959,6 +1051,16 @@ export class BillingService {
       title: `${this.humanizeLabel(params.resource)} ${this.humanizeAction(params.action)}`,
       message: `Billing ${this.humanizeLabel(params.resource).toLowerCase()} was ${this.humanizeAction(params.action).toLowerCase()} in the tenant inbox.`,
     };
+  }
+
+  private resolveActivityMemberId(data: unknown): string | null {
+    const payment = this.extractPaymentLikeRecord(data);
+    const member =
+      payment && typeof payment.member === 'object'
+        ? (payment.member as Record<string, unknown>)
+        : null;
+
+    return typeof member?.id === 'string' ? member.id : null;
   }
 
   private extractPaymentLikeRecord(

@@ -123,6 +123,24 @@ describe('UsersService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('requires a configured default role when explicit role keys are omitted', async () => {
+    repository.findUserByEmail.mockResolvedValue(null);
+    repository.usernameBelongsToAnotherUser.mockResolvedValue(false);
+    repository.findDefaultRoleIds.mockResolvedValue([]);
+    passwordService.hash.mockResolvedValue('hash');
+
+    await expect(
+      service.createMember('organization-id', {
+        email: 'coach@agoge.com',
+        password: 'Password123!',
+        firstName: 'Alex',
+        lastName: 'Coach',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(repository.createMember).not.toHaveBeenCalled();
+  });
+
   it('prevents a member from removing itself', async () => {
     repository.findMemberById.mockResolvedValue(createMemberRecord());
 

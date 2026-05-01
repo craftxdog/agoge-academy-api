@@ -15,6 +15,7 @@ import {
   ScreenType,
   UserStatus,
 } from '../generated/prisma/enums';
+import { DEFAULT_CUSTOMER_PERMISSION_KEYS } from '../src/common/constants/rbac.constant';
 import { getDatabaseConfig } from '../src/config';
 
 const pool = new Pool({
@@ -161,6 +162,11 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         description: 'View payments and billing settings.',
       },
       {
+        key: 'billing.self.read',
+        name: 'Read own billing',
+        description: 'View personal payments and billing activity.',
+      },
+      {
         key: 'billing.write',
         name: 'Write billing',
         description: 'Create payments and update payment settings.',
@@ -195,6 +201,11 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         description: 'View schedules and business hours.',
       },
       {
+        key: 'schedules.self.read',
+        name: 'Read own schedules',
+        description: 'View personal schedule availability.',
+      },
+      {
         key: 'schedules.write',
         name: 'Write schedules',
         description: 'Update schedules and business hours.',
@@ -219,7 +230,12 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
       {
         key: 'notifications.read',
         name: 'Read notifications',
-        description: 'View notifications.',
+        description: 'View the shared tenant inbox.',
+      },
+      {
+        key: 'notifications.self.read',
+        name: 'Read own activity',
+        description: 'View personal activity notifications.',
       },
     ],
     screens: [
@@ -917,7 +933,7 @@ async function createRoles(
       description: 'Default customer access.',
       isSystem: true,
       isDefault: true,
-      permissionKeys: ['billing.read', 'schedules.read', 'notifications.read'],
+      permissionKeys: [...DEFAULT_CUSTOMER_PERMISSION_KEYS],
     },
   ];
 

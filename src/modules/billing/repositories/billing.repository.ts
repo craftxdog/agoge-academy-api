@@ -426,10 +426,14 @@ export class BillingRepository {
     });
   }
 
-  findOpenPayments(organizationId: string): Promise<BillingPaymentRecord[]> {
+  findOpenPayments(
+    organizationId: string,
+    memberId?: string,
+  ): Promise<BillingPaymentRecord[]> {
     return this.prisma.payment.findMany({
       where: {
         organizationId,
+        ...(memberId && { memberId }),
         status: {
           in: [
             PaymentStatus.PENDING,
@@ -445,10 +449,12 @@ export class BillingRepository {
   findPaidPaymentsSince(
     organizationId: string,
     since: Date,
+    memberId?: string,
   ): Promise<BillingPaymentRecord[]> {
     return this.prisma.payment.findMany({
       where: {
         organizationId,
+        ...(memberId && { memberId }),
         status: PaymentStatus.PAID,
         paidAt: { gte: since },
       },

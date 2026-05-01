@@ -309,6 +309,8 @@ export class AnalyticsRepository {
     return this.prisma.notification.count({
       where: {
         organizationId,
+        memberId: null,
+        userId: null,
         isRead: false,
       },
     });
@@ -321,6 +323,8 @@ export class AnalyticsRepository {
     return this.prisma.notification.findMany({
       where: {
         organizationId,
+        memberId: null,
+        userId: null,
       },
       select: {
         id: true,

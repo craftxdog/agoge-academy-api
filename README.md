@@ -16,7 +16,7 @@ The API is already operating as a modular multi-tenant SaaS backend with tenant-
 - Users module with members, invitations and tenant membership management
 - RBAC module for tenant roles and permissions
 - Analytics module with revenue, members, operations, dashboard and catalog endpoints
-- Notifications module with shared inbox history, unread summary and read actions
+- Notifications module with shared tenant inbox plus member activity feed
 - Socket.IO realtime namespace with domain events and cache invalidation envelopes
 - Swagger/OpenAPI docs in non-production environments
 - Jest unit and E2E coverage, ESLint, Prettier and Docker support
@@ -75,7 +75,7 @@ http://localhost:3000/api/v1/docs
 - `settings`: branding, preferences, modules and screens
 - `billing`: payment catalog, invoices and transactions
 - `schedules`: locations, hours, exceptions and member schedules
-- `notifications`: shared tenant inbox with history and unread tracking
+- `notifications`: shared tenant inbox with history plus member activity endpoints for self-service clients
 - `analytics`: dashboard, revenue, members, operations and catalog
 - `audit`: operational history queries
 - `realtime`: Socket.IO namespace `/realtime`
@@ -83,8 +83,10 @@ http://localhost:3000/api/v1/docs
 ## Notifications And Realtime
 
 - Historical inbox API: `GET /api/v1/notifications`
-- Inbox summary for dropdowns: `GET /api/v1/notifications/summary`
+- Inbox summary for operational dropdowns: `GET /api/v1/notifications/summary`
+- Personal activity summary: `GET /api/v1/activity/summary`
 - Shared read actions: `PATCH /api/v1/notifications/:notificationId/read` and `PATCH /api/v1/notifications/read-all`
+- Personal activity read actions: `PATCH /api/v1/activity/:notificationId/read` and `PATCH /api/v1/activity/read-all`
 - Analytics operations summary also exposes `unreadNotifications` and `recentNotifications`
 - Realtime namespace: `/realtime`
 - Generic event name: `realtime.event`
@@ -168,7 +170,7 @@ Docker deployment workflows include preflight checks and publish images only aft
 
 - Swagger is enabled outside production.
 - In local development, `helmet` disables CSP only outside production to avoid blocking local tooling and docs.
-- Realtime and notifications are tenant-scoped. The inbox is shared per organization, not per individual user.
+- Shared inbox notifications are tenant-scoped. Personal activity notifications are member-scoped and intended for self-service/client contexts.
 
 ## Contributing
 

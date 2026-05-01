@@ -7,13 +7,14 @@ import {
   TenantGuard,
 } from '../../common';
 import { PrismaModule } from '../../database/prisma.module';
+import { NotificationsActivityController } from './notifications-activity.controller';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsRepository } from './repositories';
 import { NotificationsService } from './services';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({})],
-  controllers: [NotificationsController],
+  controllers: [NotificationsController, NotificationsActivityController],
   providers: [
     NotificationsRepository,
     NotificationsService,

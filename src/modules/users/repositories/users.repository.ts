@@ -175,10 +175,10 @@ export class UsersRepository {
     return this.prisma.role.findMany({
       where: {
         organizationId,
-        OR: [{ isDefault: true }, { key: 'customer' }],
+        isDefault: true,
       },
       select: { id: true, key: true },
-      orderBy: [{ isDefault: 'desc' }, { key: 'asc' }],
+      orderBy: [{ key: 'asc' }],
       take: 1,
     });
   }
@@ -506,6 +506,8 @@ export class UsersRepository {
               joinedAt: new Date(),
             },
           });
+
+      await tx.memberRole.deleteMany({ where: { memberId: member.id } });
 
       if (params.roleIds.length > 0) {
         await tx.memberRole.createMany({
