@@ -97,22 +97,29 @@ export class AuthRepository {
   async createFounderWorkspace(params: {
     dto: RegisterOrganizationDto;
     slug: string;
-    passwordHash: string;
+    passwordHash?: string;
+    existingUserId?: string;
   }): Promise<AuthUserRecord> {
-    const { dto, slug, passwordHash } = params;
+    const { dto, slug, passwordHash, existingUserId } = params;
 
     return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          email: dto.email.toLowerCase(),
-          username: dto.username?.toLowerCase(),
-          passwordHash,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          platformRole: PlatformRole.USER,
-          status: UserStatus.ACTIVE,
-        },
-      });
+      const user = existingUserId
+        ? await tx.user.findUniqueOrThrow({
+            where: { id: existingUserId },
+            select: { id: true },
+          })
+        : await tx.user.create({
+            data: {
+              email: dto.email.toLowerCase(),
+              username: dto.username?.toLowerCase(),
+              passwordHash: passwordHash!,
+              firstName: dto.firstName,
+              lastName: dto.lastName,
+              platformRole: PlatformRole.USER,
+              status: UserStatus.ACTIVE,
+            },
+            select: { id: true },
+          });
 
       const organization = await tx.organization.create({
         data: {

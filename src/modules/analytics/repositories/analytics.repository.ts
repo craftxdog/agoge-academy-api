@@ -81,6 +81,10 @@ export type AnalyticsNotificationRecord = {
   createdAt: Date;
 };
 
+export type AnalyticsMemberScheduleRecord = {
+  dayOfWeek: number;
+};
+
 @Injectable()
 export class AnalyticsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -218,6 +222,136 @@ export class AnalyticsRepository {
         status: true,
         joinedAt: true,
         deletedAt: true,
+      },
+    });
+  }
+
+  findMemberPayments(
+    organizationId: string,
+    memberId: string,
+    start: Date,
+    end: Date,
+  ): Promise<AnalyticsPaymentRecord[]> {
+    return this.prisma.payment.findMany({
+      where: {
+        organizationId,
+        memberId,
+        createdAt: {
+          gte: start,
+          lte: end,
+        },
+      },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        status: true,
+        createdAt: true,
+        dueDate: true,
+        paymentType: {
+          select: {
+            id: true,
+            key: true,
+            name: true,
+          },
+        },
+        transactions: {
+          select: {
+            amount: true,
+            status: true,
+          },
+        },
+      },
+    });
+  }
+
+  findMemberOpenPaymentsUntil(
+    organizationId: string,
+    memberId: string,
+    end: Date,
+  ): Promise<AnalyticsPaymentRecord[]> {
+    return this.prisma.payment.findMany({
+      where: {
+        organizationId,
+        memberId,
+        createdAt: {
+          lte: end,
+        },
+        status: {
+          in: [
+            PaymentStatus.PENDING,
+            PaymentStatus.PARTIALLY_PAID,
+            PaymentStatus.OVERDUE,
+          ],
+        },
+      },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        status: true,
+        createdAt: true,
+        dueDate: true,
+        paymentType: {
+          select: {
+            id: true,
+            key: true,
+            name: true,
+          },
+        },
+        transactions: {
+          select: {
+            amount: true,
+            status: true,
+          },
+        },
+      },
+    });
+  }
+
+  findMemberScheduleWindows(
+    memberId: string,
+  ): Promise<AnalyticsMemberScheduleRecord[]> {
+    return this.prisma.memberSchedule.findMany({
+      where: { memberId },
+      select: {
+        dayOfWeek: true,
+      },
+    });
+  }
+
+  countMemberUnreadNotifications(
+    organizationId: string,
+    memberId: string,
+  ): Promise<number> {
+    return this.prisma.notification.count({
+      where: {
+        organizationId,
+        memberId,
+        isRead: false,
+      },
+    });
+  }
+
+  findMemberRecentNotifications(
+    organizationId: string,
+    memberId: string,
+    limit: number,
+  ): Promise<AnalyticsNotificationRecord[]> {
+    return this.prisma.notification.findMany({
+      where: {
+        organizationId,
+        memberId,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit,
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        message: true,
+        isRead: true,
+        createdAt: true,
       },
     });
   }

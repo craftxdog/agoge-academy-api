@@ -36,12 +36,14 @@ export const SYSTEM_PERMISSIONS = {
   notificationsSelfRead: 'notifications.self.read',
   auditRead: 'audit.read',
   analyticsRead: 'analytics.read',
+  analyticsSelfRead: 'analytics.self.read',
 } as const;
 
 export const DEFAULT_CUSTOMER_PERMISSION_KEYS = [
   SYSTEM_PERMISSIONS.billingSelfRead,
   SYSTEM_PERMISSIONS.schedulesSelfRead,
   SYSTEM_PERMISSIONS.notificationsSelfRead,
+  SYSTEM_PERMISSIONS.analyticsSelfRead,
 ] as const;
 
 export type SystemModule = (typeof SYSTEM_MODULES)[keyof typeof SYSTEM_MODULES];

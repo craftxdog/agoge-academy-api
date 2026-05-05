@@ -86,9 +86,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     if (exception.code === 'P2002') {
+      const target = this.extractPrismaUniqueTarget(exception.meta);
+      const targetSuffix = target.length > 0 ? ` (${target.join(', ')})` : '';
+
       return {
         status: HttpStatus.CONFLICT,
-        message: 'Resource already exists',
+        message: `Resource already exists${targetSuffix}`,
         error: 'CONFLICT',
       };
     }
@@ -126,6 +129,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
     return (
       typeof maybeError.code === 'string' && maybeError.code.startsWith('P')
     );
+  }
+
+  private extractPrismaUniqueTarget(meta: unknown): string[] {
+    if (!meta || typeof meta !== 'object') {
+      return [];
+    }
+
+    const target = (meta as { target?: unknown }).target;
+
+    if (Array.isArray(target)) {
+      return target.filter((item): item is string => typeof item === 'string');
+    }
+
+    if (typeof target === 'string') {
+      return [target];
+    }
+
+    return [];
   }
 
   private logInternalError(

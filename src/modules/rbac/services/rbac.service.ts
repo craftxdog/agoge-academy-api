@@ -5,11 +5,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PaginatedResult, SYSTEM_ROLES } from '../../../common';
+import {
+  inferAccessScopeFromPermission,
+  PaginatedResult,
+  SYSTEM_ROLES,
+} from '../../../common';
 import {
   CreatePermissionDto,
   CreateRoleDto,
   RbacAccessMatrixResponseDto,
+  RbacNavigationResponseDto,
   RbacMemberRoleResponseDto,
   RbacPermissionQueryDto,
   RbacPermissionResponseDto,
@@ -296,6 +301,46 @@ export class RbacService {
     };
   }
 
+  async getNavigation(params: {
+    organizationId: string;
+    permissions: string[];
+    enabledModules: string[];
+  }): Promise<RbacNavigationResponseDto> {
+    const modules = await this.rbacRepository.findAccessModules(
+      params.organizationId,
+    );
+    const permissionSet = new Set(params.permissions);
+    const enabledModuleSet = new Set(params.enabledModules);
+
+    return {
+      organizationId: params.organizationId,
+      modules: modules
+        .filter(
+          (module) =>
+            module.isEnabled && enabledModuleSet.has(module.module.key),
+        )
+        .map((module) => {
+          const mapped = this.mapAccessModule(module);
+          const permissions = mapped.permissions.filter((permission) =>
+            permissionSet.has(permission.key),
+          );
+          const screens = mapped.screens.filter(
+            (screen) =>
+              screen.isVisible &&
+              (!screen.requiredPermissionKey ||
+                permissionSet.has(screen.requiredPermissionKey)),
+          );
+
+          return {
+            ...mapped,
+            permissions,
+            screens,
+          };
+        })
+        .filter((module) => module.screens.length > 0),
+    };
+  }
+
   private async getRoleOrThrow(
     organizationId: string,
     roleId: string,
@@ -415,6 +460,7 @@ export class RbacService {
             description: permission.module.description,
           }
         : null,
+      accessScope: inferAccessScopeFromPermission(permission.key),
     };
   }
 
@@ -449,6 +495,9 @@ export class RbacService {
         type: screen.type,
         requiredPermissionKey: screen.requiredPermissionKey,
         isVisible: screen.isVisible,
+        accessScope: inferAccessScopeFromPermission(
+          screen.requiredPermissionKey,
+        ),
       })),
     };
   }

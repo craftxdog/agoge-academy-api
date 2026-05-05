@@ -38,28 +38,51 @@ export class AuthService {
     const email = this.normalizeEmail(dto.email);
     const username = dto.username?.toLowerCase();
     const slug = this.slugify(dto.organizationSlug ?? dto.organizationName);
+    const existingUser = await this.authRepository.findUserByEmail(email);
 
     if (!slug) {
       throw new BadRequestException('Organization slug is invalid');
     }
 
-    if (await this.authRepository.emailExists(email)) {
-      throw new ConflictException('Email is already registered');
+    if (existingUser && existingUser.status !== UserStatus.ACTIVE) {
+      throw new ConflictException(
+        'Email is already registered with an inactive account',
+      );
     }
 
-    if (username && (await this.authRepository.usernameExists(username))) {
-      throw new ConflictException('Username is already registered');
+    if (username && (!existingUser || existingUser.username !== username)) {
+      const usernameTaken = await this.authRepository.usernameExists(username);
+
+      if (usernameTaken) {
+        throw new ConflictException('Username is already registered');
+      }
+    }
+
+    if (existingUser) {
+      const passwordMatches = await this.passwordService.verify(
+        dto.password,
+        existingUser.passwordHash,
+      );
+
+      if (!passwordMatches) {
+        throw new ConflictException(
+          'Email is already registered. Sign in or use the same password to create another organization.',
+        );
+      }
     }
 
     if (await this.authRepository.organizationSlugExists(slug)) {
       throw new ConflictException('Organization slug is already in use');
     }
 
-    const passwordHash = await this.passwordService.hash(dto.password);
+    const passwordHash = existingUser
+      ? undefined
+      : await this.passwordService.hash(dto.password);
     const user = await this.authRepository.createFounderWorkspace({
       dto: { ...dto, email, username },
       slug,
       passwordHash,
+      existingUserId: existingUser?.id,
     });
 
     return this.createSession(user, this.selectMembership(user, { slug }));

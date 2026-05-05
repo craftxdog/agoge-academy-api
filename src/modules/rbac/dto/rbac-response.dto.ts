@@ -28,6 +28,9 @@ export class RbacPermissionResponseDto {
 
   @ApiPropertyOptional({ type: RbacModuleSummaryDto })
   module?: RbacModuleSummaryDto | null;
+
+  @ApiProperty({ example: 'tenant', enum: ['tenant', 'self', 'public'] })
+  accessScope: 'tenant' | 'self' | 'public';
 }
 
 export class RbacRoleResponseDto {
@@ -102,6 +105,9 @@ export class RbacScreenResponseDto {
 
   @ApiProperty({ example: true })
   isVisible: boolean;
+
+  @ApiProperty({ example: 'tenant', enum: ['tenant', 'self', 'public'] })
+  accessScope: 'tenant' | 'self' | 'public';
 }
 
 export class RbacAccessModuleResponseDto {
@@ -130,4 +136,12 @@ export class RbacAccessMatrixResponseDto {
 
   @ApiProperty({ type: [RbacRoleResponseDto] })
   roles: RbacRoleResponseDto[];
+}
+
+export class RbacNavigationResponseDto {
+  @ApiProperty({ example: '7ce9fdf3-9555-4f43-a676-390bd78dbe6a' })
+  organizationId: string;
+
+  @ApiProperty({ type: [RbacAccessModuleResponseDto] })
+  modules: RbacAccessModuleResponseDto[];
 }

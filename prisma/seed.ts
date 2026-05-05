@@ -159,7 +159,7 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
       {
         key: 'billing.read',
         name: 'Read billing',
-        description: 'View payments and billing settings.',
+        description: 'View tenant payments, charges and billing settings.',
       },
       {
         key: 'billing.self.read',
@@ -181,6 +181,13 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         sortOrder: 10,
       },
       {
+        key: 'my-payments',
+        name: 'My Payments',
+        path: '/billing/me/payments',
+        requiredPermissionKey: 'billing.self.read',
+        sortOrder: 15,
+      },
+      {
         key: 'payment-settings',
         name: 'Payment Settings',
         path: '/billing/settings',
@@ -198,7 +205,8 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
       {
         key: 'schedules.read',
         name: 'Read schedules',
-        description: 'View schedules and business hours.',
+        description:
+          'View organization schedules, locations, exceptions and member availability.',
       },
       {
         key: 'schedules.self.read',
@@ -218,6 +226,13 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         path: '/schedules/business-hours',
         requiredPermissionKey: 'schedules.read',
         sortOrder: 10,
+      },
+      {
+        key: 'my-availability',
+        name: 'My Availability',
+        path: '/schedules/me/availability',
+        requiredPermissionKey: 'schedules.self.read',
+        sortOrder: 15,
       },
     ],
   },
@@ -245,6 +260,13 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         path: '/notifications',
         requiredPermissionKey: 'notifications.read',
         sortOrder: 10,
+      },
+      {
+        key: 'activity',
+        name: 'My Activity',
+        path: '/activity',
+        requiredPermissionKey: 'notifications.self.read',
+        sortOrder: 15,
       },
     ],
   },
@@ -281,7 +303,13 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         key: 'analytics.read',
         name: 'Read analytics',
         description:
-          'View executive analytics dashboards and business insights.',
+          'View tenant-wide analytics dashboards and business insights.',
+      },
+      {
+        key: 'analytics.self.read',
+        name: 'Read own analytics',
+        description:
+          'View personal self-service analytics such as own balances, availability and activity.',
       },
     ],
     screens: [
@@ -291,6 +319,13 @@ const SYSTEM_CATALOG: SystemCatalogSeed[] = [
         path: '/analytics/dashboard',
         requiredPermissionKey: 'analytics.read',
         sortOrder: 10,
+      },
+      {
+        key: 'my-dashboard',
+        name: 'My Dashboard',
+        path: '/analytics/me/dashboard',
+        requiredPermissionKey: 'analytics.self.read',
+        sortOrder: 15,
       },
     ],
   },

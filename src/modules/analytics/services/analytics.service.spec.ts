@@ -18,6 +18,11 @@ describe('AnalyticsService', () => {
     findPaymentsCreatedBetween: jest.fn(),
     findOpenPaymentsUntil: jest.fn(),
     findTransactionsProcessedBetween: jest.fn(),
+    findMemberPayments: jest.fn(),
+    findMemberOpenPaymentsUntil: jest.fn(),
+    findMemberScheduleWindows: jest.fn(),
+    countMemberUnreadNotifications: jest.fn(),
+    findMemberRecentNotifications: jest.fn(),
     findMembers: jest.fn(),
     findInvitationsCreatedBetween: jest.fn(),
     countPendingInvitations: jest.fn(),
@@ -177,5 +182,72 @@ describe('AnalyticsService', () => {
         top: 5,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('builds a personal dashboard for the authenticated member', async () => {
+    repository.findMemberPayments.mockResolvedValue([
+      {
+        id: 'payment-1',
+        amount: decimal(100),
+        currency: 'USD',
+        status: PaymentStatus.PENDING,
+        createdAt: new Date('2026-04-10T12:00:00.000Z'),
+        dueDate: new Date('2026-04-15T12:00:00.000Z'),
+        paymentType: { id: 'type-1', key: 'membership', name: 'Membership' },
+        transactions: [
+          { amount: decimal(40), status: PaymentTransactionStatus.SUCCEEDED },
+        ],
+      },
+    ]);
+    repository.findMemberOpenPaymentsUntil.mockResolvedValue([
+      {
+        id: 'payment-1',
+        amount: decimal(100),
+        currency: 'USD',
+        status: PaymentStatus.OVERDUE,
+        createdAt: new Date('2026-04-10T12:00:00.000Z'),
+        dueDate: new Date('2026-04-15T12:00:00.000Z'),
+        paymentType: { id: 'type-1', key: 'membership', name: 'Membership' },
+        transactions: [
+          { amount: decimal(40), status: PaymentTransactionStatus.SUCCEEDED },
+        ],
+      },
+    ]);
+    repository.findMemberScheduleWindows.mockResolvedValue([
+      { dayOfWeek: 1 },
+      { dayOfWeek: 3 },
+      { dayOfWeek: 3 },
+    ]);
+    repository.countMemberUnreadNotifications.mockResolvedValue(2);
+    repository.findMemberRecentNotifications.mockResolvedValue([
+      {
+        id: 'notification-1',
+        type: 'PAYMENT_CREATED',
+        title: 'Payment created',
+        message: 'Invoice INV-202604-000001 was created.',
+        isRead: false,
+        createdAt: new Date('2026-04-20T12:00:00.000Z'),
+      },
+    ]);
+
+    const result = await service.getMemberDashboard(
+      'organization-id',
+      'member-id',
+      {
+        dateFrom: '2026-04-01T00:00:00.000Z',
+        dateTo: '2026-04-30T23:59:59.999Z',
+        groupBy: 'day',
+        top: 5,
+      },
+    );
+
+    expect(result.memberId).toBe('member-id');
+    expect(result.invoiced.amount).toBe(100);
+    expect(result.collected.amount).toBe(40);
+    expect(result.outstanding.amount).toBe(60);
+    expect(result.schedules.availabilityWindows).toBe(3);
+    expect(result.schedules.scheduledDays).toEqual([1, 3]);
+    expect(result.activity.unreadNotifications).toBe(2);
+    expect(result.activity.recentNotifications).toHaveLength(1);
   });
 });

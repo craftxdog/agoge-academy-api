@@ -5,7 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ScreenType } from 'generated/prisma/enums';
-import { SYSTEM_MODULES } from '../../../common';
+import {
+  inferAccessScopeFromPermission,
+  SYSTEM_MODULES,
+} from '../../../common';
 import { RealtimeService } from '../../realtime';
 import { StorageFile, StorageService } from '../../storage';
 import {
@@ -636,6 +639,7 @@ export class SettingsService {
       config: screen.config,
       sortOrder: screen.sortOrder,
       isVisible: screen.isVisible,
+      accessScope: inferAccessScopeFromPermission(screen.requiredPermissionKey),
       updatedAt: screen.updatedAt,
     };
   }

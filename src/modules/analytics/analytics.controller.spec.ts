@@ -2,6 +2,7 @@ import { AnalyticsController } from './analytics.controller';
 
 describe('AnalyticsController', () => {
   const analyticsService = {
+    getMemberDashboard: jest.fn(),
     getDashboard: jest.fn(),
     getRevenue: jest.fn(),
     getMembers: jest.fn(),
@@ -25,6 +26,25 @@ describe('AnalyticsController', () => {
     ).resolves.toBe(response);
     expect(analyticsService.getDashboard).toHaveBeenCalledWith(
       'organization-id',
+      query,
+    );
+  });
+
+  it('delegates personal dashboard requests to the analytics service', async () => {
+    const query = { groupBy: 'day', top: 5 };
+    const response = { generatedAt: new Date() };
+    analyticsService.getMemberDashboard.mockResolvedValue(response);
+
+    await expect(
+      controller.getMemberDashboard(
+        'organization-id',
+        'member-id',
+        query as never,
+      ),
+    ).resolves.toBe(response);
+    expect(analyticsService.getMemberDashboard).toHaveBeenCalledWith(
+      'organization-id',
+      'member-id',
       query,
     );
   });

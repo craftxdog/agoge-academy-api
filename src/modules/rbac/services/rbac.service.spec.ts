@@ -172,4 +172,78 @@ describe('RbacService', () => {
       }),
     );
   });
+
+  it('filters navigation to enabled modules and granted screens only', async () => {
+    repository.findAccessModules.mockResolvedValue([
+      {
+        moduleId: 'module-billing',
+        isEnabled: true,
+        module: {
+          key: 'billing',
+          name: 'Billing',
+          permissions: [
+            {
+              id: 'perm-1',
+              key: 'billing.read',
+              name: 'Read billing',
+              description: null,
+              module: {
+                key: 'billing',
+                name: 'Billing',
+                description: null,
+              },
+            },
+            {
+              id: 'perm-2',
+              key: 'billing.self.read',
+              name: 'Read own billing',
+              description: null,
+              module: {
+                key: 'billing',
+                name: 'Billing',
+                description: null,
+              },
+            },
+          ],
+        },
+        organization: {
+          screens: [
+            {
+              moduleId: 'module-billing',
+              key: 'billing.payments',
+              title: 'Payments',
+              path: '/billing/payments',
+              type: 'SYSTEM',
+              requiredPermissionKey: 'billing.read',
+              isVisible: true,
+            },
+            {
+              moduleId: 'module-billing',
+              key: 'billing.my-payments',
+              title: 'My Payments',
+              path: '/billing/me/payments',
+              type: 'SYSTEM',
+              requiredPermissionKey: 'billing.self.read',
+              isVisible: true,
+            },
+          ],
+        },
+      },
+    ]);
+
+    const result = await service.getNavigation({
+      organizationId: 'organization-id',
+      permissions: ['billing.self.read'],
+      enabledModules: ['billing'],
+    });
+
+    expect(result.modules).toHaveLength(1);
+    expect(result.modules[0].permissions.map((item) => item.key)).toEqual([
+      'billing.self.read',
+    ]);
+    expect(result.modules[0].screens.map((item) => item.key)).toEqual([
+      'billing.my-payments',
+    ]);
+    expect(result.modules[0].screens[0].accessScope).toBe('self');
+  });
 });

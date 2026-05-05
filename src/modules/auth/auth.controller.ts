@@ -47,7 +47,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Create a new SaaS organization and founder account',
     description:
-      'Creates the tenant organization, owner user, active membership, admin role assignment, enabled modules and default settings.',
+      'Creates the tenant organization, owner membership, admin role assignment, enabled modules and default settings. If the email already belongs to an active account and the provided password matches, the new organization is attached to that existing account instead of creating a duplicate user.',
   })
   @ApiCreatedResponse({ type: AuthSessionResponseDto })
   async registerOrganization(

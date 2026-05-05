@@ -143,6 +143,9 @@ export class OrganizationScreenResponseDto {
   @ApiProperty({ example: true })
   isVisible: boolean;
 
+  @ApiProperty({ example: 'tenant', enum: ['tenant', 'self', 'public'] })
+  accessScope: 'tenant' | 'self' | 'public';
+
   @ApiProperty({ example: '2026-04-20T00:00:00.000Z' })
   updatedAt: Date;
 }

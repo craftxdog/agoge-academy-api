@@ -60,7 +60,6 @@ const createUserRecord = (overrides: Record<string, unknown> = {}) => ({
 
 describe('AuthService', () => {
   const authRepository = {
-    emailExists: jest.fn(),
     usernameExists: jest.fn(),
     organizationSlugExists: jest.fn(),
     createFounderWorkspace: jest.fn(),
@@ -99,6 +98,89 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(passwordService.hash).not.toHaveBeenCalled();
+    expect(authRepository.createFounderWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('creates an additional organization for an existing active account when the password matches', async () => {
+    const existingUser = createUserRecord({
+      email: 'founder@agoge.com',
+      username: 'founder',
+      passwordHash: 'existing-hash',
+    });
+    const newWorkspaceUser = createUserRecord({
+      memberships: [
+        ...existingUser.memberships,
+        {
+          ...existingUser.memberships[0],
+          id: 'member-2',
+          organizationId: 'organization-2',
+          organization: {
+            ...existingUser.memberships[0].organization,
+            id: 'organization-2',
+            slug: 'tenant-two',
+            name: 'Tenant Two',
+          },
+        },
+      ],
+    });
+
+    authRepository.findUserByEmail.mockResolvedValue(existingUser);
+    authRepository.usernameExists.mockResolvedValue(false);
+    authRepository.organizationSlugExists.mockResolvedValue(false);
+    authRepository.createFounderWorkspace.mockResolvedValue(newWorkspaceUser);
+    passwordService.verify.mockResolvedValue(true);
+    jwtService.signAsync = jest
+      .fn()
+      .mockResolvedValueOnce('new-access-token')
+      .mockResolvedValueOnce('new-refresh-token');
+
+    const result = await service.registerOrganization({
+      organizationName: 'Tenant Two',
+      organizationSlug: 'tenant-two',
+      email: 'founder@agoge.com',
+      username: 'founder',
+      firstName: 'Alex',
+      lastName: 'Founder',
+      password: 'Password123!',
+    } as never);
+
+    expect(passwordService.hash).not.toHaveBeenCalled();
+    expect(passwordService.verify).toHaveBeenCalledWith(
+      'Password123!',
+      'existing-hash',
+    );
+    expect(authRepository.createFounderWorkspace).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slug: 'tenant-two',
+        existingUserId: 'user-id',
+        passwordHash: undefined,
+      }),
+    );
+    expect(result.activeMembership?.organization.slug).toBe('tenant-two');
+  });
+
+  it('rejects additional organization registration when the existing account password does not match', async () => {
+    authRepository.findUserByEmail.mockResolvedValue(
+      createUserRecord({
+        passwordHash: 'existing-hash',
+      }),
+    );
+    authRepository.organizationSlugExists.mockResolvedValue(false);
+    passwordService.verify.mockResolvedValue(false);
+
+    await expect(
+      service.registerOrganization({
+        organizationName: 'Tenant Two',
+        organizationSlug: 'tenant-two',
+        email: 'founder@agoge.com',
+        firstName: 'Alex',
+        lastName: 'Founder',
+        password: 'Password123!',
+      } as never),
+    ).rejects.toThrow(
+      'Email is already registered. Sign in or use the same password to create another organization.',
+    );
+
     expect(authRepository.createFounderWorkspace).not.toHaveBeenCalled();
   });
 

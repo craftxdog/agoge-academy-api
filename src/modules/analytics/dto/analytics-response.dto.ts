@@ -274,6 +274,54 @@ export class AnalyticsDashboardResponseDto {
   insights: AnalyticsInsightResponseDto[];
 }
 
+export class AnalyticsSelfScheduleSummaryDto {
+  @ApiProperty({ example: 6 })
+  availabilityWindows: number;
+
+  @ApiProperty({ example: [1, 3, 5] })
+  scheduledDays: number[];
+}
+
+export class AnalyticsSelfActivitySummaryDto {
+  @ApiProperty({ example: 4 })
+  unreadNotifications: number;
+
+  @ApiProperty({ type: [AnalyticsRecentNotificationDto] })
+  recentNotifications: AnalyticsRecentNotificationDto[];
+}
+
+export class AnalyticsSelfDashboardResponseDto {
+  @ApiProperty({ example: '2026-04-21T12:00:00.000Z' })
+  generatedAt: Date;
+
+  @ApiProperty({ type: AnalyticsRangeResponseDto })
+  range: AnalyticsRangeResponseDto;
+
+  @ApiProperty({ example: '7ce9fdf3-9555-4f43-a676-390bd78dbe6a' })
+  memberId: string;
+
+  @ApiProperty({ type: AnalyticsMoneyMetricDto })
+  invoiced: AnalyticsMoneyMetricDto;
+
+  @ApiProperty({ type: AnalyticsMoneyMetricDto })
+  collected: AnalyticsMoneyMetricDto;
+
+  @ApiProperty({ type: AnalyticsMoneyMetricDto })
+  outstanding: AnalyticsMoneyMetricDto;
+
+  @ApiProperty({ type: AnalyticsMoneyMetricDto })
+  overdue: AnalyticsMoneyMetricDto;
+
+  @ApiProperty({ type: [AnalyticsDimensionCountDto] })
+  paymentStatusBreakdown: AnalyticsDimensionCountDto[];
+
+  @ApiProperty({ type: AnalyticsSelfScheduleSummaryDto })
+  schedules: AnalyticsSelfScheduleSummaryDto;
+
+  @ApiProperty({ type: AnalyticsSelfActivitySummaryDto })
+  activity: AnalyticsSelfActivitySummaryDto;
+}
+
 export class AnalyticsCatalogItemDto {
   @ApiProperty({ example: '7ce9fdf3-9555-4f43-a676-390bd78dbe6a' })
   id: string;

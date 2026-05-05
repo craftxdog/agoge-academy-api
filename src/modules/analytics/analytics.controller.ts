@@ -6,6 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  CurrentMember,
   CurrentOrganization,
   JwtAuthGuard,
   ModulesGuard,
@@ -23,6 +24,7 @@ import {
   AnalyticsOperationsResponseDto,
   AnalyticsQueryDto,
   AnalyticsRevenueResponseDto,
+  AnalyticsSelfDashboardResponseDto,
 } from './dto';
 import { AnalyticsService } from './services';
 
@@ -34,6 +36,26 @@ import { AnalyticsService } from './services';
 @Permissions(SYSTEM_PERMISSIONS.analyticsRead)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
+
+  @Get('me/dashboard')
+  @Permissions(SYSTEM_PERMISSIONS.analyticsSelfRead)
+  @ApiOperation({
+    summary: 'Get personal analytics dashboard',
+    description:
+      'Returns a self-service analytics view for the authenticated member with own balances, availability coverage and recent activity.',
+  })
+  @ApiOkResponse({ type: AnalyticsSelfDashboardResponseDto })
+  getMemberDashboard(
+    @CurrentOrganization('id') organizationId: string,
+    @CurrentMember('id') memberId: string,
+    @Query() query: AnalyticsQueryDto,
+  ) {
+    return this.analyticsService.getMemberDashboard(
+      organizationId,
+      memberId,
+      query,
+    );
+  }
 
   @Get('dashboard')
   @ApiOperation({

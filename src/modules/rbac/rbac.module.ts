@@ -7,13 +7,14 @@ import {
   TenantGuard,
 } from '../../common';
 import { PrismaModule } from '../../database/prisma.module';
+import { RbacNavigationController } from './rbac-navigation.controller';
 import { RbacRepository } from './repositories/rbac.repository';
 import { RbacController } from './rbac.controller';
 import { RbacService } from './services/rbac.service';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({})],
-  controllers: [RbacController],
+  controllers: [RbacController, RbacNavigationController],
   providers: [
     RbacRepository,
     RbacService,

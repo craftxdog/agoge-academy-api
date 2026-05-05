@@ -19,6 +19,7 @@ import {
   AnalyticsQueryDto,
   AnalyticsRangeResponseDto,
   AnalyticsRateMetricDto,
+  AnalyticsSelfDashboardResponseDto,
   AnalyticsRevenueResponseDto,
   AnalyticsTrendPointDto,
 } from '../dto';
@@ -59,6 +60,87 @@ export class AnalyticsService {
       members,
       operations,
       insights: this.buildInsights(revenue, members, operations),
+    };
+  }
+
+  async getMemberDashboard(
+    organizationId: string,
+    memberId: string,
+    query: AnalyticsQueryDto,
+  ): Promise<AnalyticsSelfDashboardResponseDto> {
+    const range = this.resolveRange(query);
+    const [
+      paymentsInRange,
+      openPaymentsUntilEnd,
+      scheduleWindows,
+      unreadNotifications,
+      recentNotifications,
+    ] = await Promise.all([
+      this.analyticsRepository.findMemberPayments(
+        organizationId,
+        memberId,
+        range.start,
+        range.end,
+      ),
+      this.analyticsRepository.findMemberOpenPaymentsUntil(
+        organizationId,
+        memberId,
+        range.end,
+      ),
+      this.analyticsRepository.findMemberScheduleWindows(memberId),
+      this.analyticsRepository.countMemberUnreadNotifications(
+        organizationId,
+        memberId,
+      ),
+      this.analyticsRepository.findMemberRecentNotifications(
+        organizationId,
+        memberId,
+        5,
+      ),
+    ]);
+
+    const collectedTransactions = paymentsInRange.flatMap((payment) =>
+      payment.transactions.filter(
+        (transaction) =>
+          transaction.status === PaymentTransactionStatus.SUCCEEDED,
+      ),
+    );
+    const invoicedAmount = this.sumPaymentAmounts(paymentsInRange);
+    const collectedAmount = this.sumTransactionAmounts(collectedTransactions);
+    const outstandingAmount = this.sumOutstandingBalances(openPaymentsUntilEnd);
+    const overdueAmount = this.sumOutstandingBalances(
+      openPaymentsUntilEnd.filter((payment) => payment.dueDate <= range.end),
+    );
+    const currency = this.resolveCurrency(
+      paymentsInRange.map((payment) => payment.currency),
+    );
+
+    return {
+      generatedAt: new Date(),
+      range: this.mapRange(range),
+      memberId,
+      invoiced: this.toMoneyMetric(invoicedAmount, currency),
+      collected: this.toMoneyMetric(collectedAmount, currency),
+      outstanding: this.toMoneyMetric(outstandingAmount, currency),
+      overdue: this.toMoneyMetric(overdueAmount, currency),
+      paymentStatusBreakdown: this.buildPaymentStatusBreakdown(paymentsInRange),
+      schedules: {
+        availabilityWindows: scheduleWindows.length,
+        scheduledDays: [
+          ...new Set(scheduleWindows.map((item) => item.dayOfWeek)),
+        ].sort((left, right) => left - right),
+      },
+      activity: {
+        unreadNotifications,
+        recentNotifications: recentNotifications.map((notification) => ({
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          isRead: notification.isRead,
+          createdAt: notification.createdAt,
+        })),
+      },
     };
   }
 
@@ -771,7 +853,7 @@ export class AnalyticsService {
   }
 
   private sumTransactionAmounts(
-    transactions: AnalyticsTransactionRecord[],
+    transactions: Array<{ amount: Prisma.Decimal }>,
   ): number {
     return transactions.reduce(
       (total, transaction) => total + this.decimalToNumber(transaction.amount),
@@ -803,7 +885,7 @@ export class AnalyticsService {
 
   private resolveCurrency(
     paymentCurrencies: string[],
-    transactionCurrencies: string[],
+    transactionCurrencies: string[] = [],
   ): string {
     return paymentCurrencies[0] ?? transactionCurrencies[0] ?? 'USD';
   }
