@@ -52,6 +52,15 @@ No usar para navegación runtime:
 
 Esos endpoints son de administración/configuración tenant, no de navegación del usuario final.
 
+### 3.1 Invariante nueva de navegación
+
+Un módulo habilitado no debe quedar sin ninguna pantalla visible.
+
+Si una pantalla era la última visible dentro de un módulo habilitado:
+
+- la API ahora rechaza ocultarla,
+- y el tenant debe deshabilitar el módulo completo si ya no quiere exponer esa superficie.
+
 ## 4. Semántica de permisos
 
 ### 4.1 Permisos tenant

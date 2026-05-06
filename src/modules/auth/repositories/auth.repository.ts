@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from 'generated/prisma/client';
 import { MemberStatus, PlatformRole, UserStatus } from 'generated/prisma/enums';
 import {
-  DEFAULT_CUSTOMER_PERMISSION_KEYS,
+  ensureSystemAccessCatalog,
+  ensureSystemRoles,
+  syncOrganizationAccessModel,
   SYSTEM_ROLES,
-} from '../../../common/constants/rbac.constant';
+} from '../../../common';
 import { PrismaService } from '../../../database/prisma.service';
 import { RegisterOrganizationDto } from '../dto';
 
@@ -142,72 +144,17 @@ export class AuthRepository {
         },
       });
 
-      const [permissions, customerPermissions, appModules, appScreens] =
-        await Promise.all([
-          tx.permission.findMany({ select: { id: true } }),
-          tx.permission.findMany({
-            where: {
-              key: {
-                in: [...DEFAULT_CUSTOMER_PERMISSION_KEYS],
-              },
-            },
-            select: { id: true },
-          }),
-          tx.appModule.findMany({ select: { id: true, sortOrder: true } }),
-          tx.appScreen.findMany({
-            select: {
-              id: true,
-              moduleId: true,
-              key: true,
-              name: true,
-              path: true,
-              requiredPermissionKey: true,
-              sortOrder: true,
-              module: { select: { key: true } },
-            },
-          }),
-        ]);
+      await ensureSystemAccessCatalog(tx);
+      await syncOrganizationAccessModel(tx, organization.id);
+      await ensureSystemRoles(tx, organization.id);
 
-      const adminRole = await tx.role.create({
-        data: {
+      const adminRole = await tx.role.findFirstOrThrow({
+        where: {
           organizationId: organization.id,
           key: SYSTEM_ROLES.admin,
-          name: 'Admin',
-          description: 'Full organization administration.',
-          isSystem: true,
         },
+        select: { id: true },
       });
-
-      const customerRole = await tx.role.create({
-        data: {
-          organizationId: organization.id,
-          key: SYSTEM_ROLES.customer,
-          name: 'Customer',
-          description: 'Default self-service customer access.',
-          isSystem: true,
-          isDefault: true,
-        },
-      });
-
-      if (permissions.length > 0) {
-        await tx.rolePermission.createMany({
-          data: permissions.map((permission) => ({
-            roleId: adminRole.id,
-            permissionId: permission.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      if (customerPermissions.length > 0) {
-        await tx.rolePermission.createMany({
-          data: customerPermissions.map((permission) => ({
-            roleId: customerRole.id,
-            permissionId: permission.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
 
       await tx.memberRole.create({
         data: {
@@ -215,35 +162,6 @@ export class AuthRepository {
           roleId: adminRole.id,
         },
       });
-
-      if (appModules.length > 0) {
-        await tx.organizationModule.createMany({
-          data: appModules.map((module) => ({
-            organizationId: organization.id,
-            moduleId: module.id,
-            isEnabled: true,
-            sortOrder: module.sortOrder,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      if (appScreens.length > 0) {
-        await tx.organizationScreen.createMany({
-          data: appScreens.map((screen) => ({
-            organizationId: organization.id,
-            appScreenId: screen.id,
-            moduleId: screen.moduleId,
-            key: `${screen.module.key}.${screen.key}`,
-            title: screen.name,
-            path: screen.path,
-            requiredPermissionKey: screen.requiredPermissionKey,
-            sortOrder: screen.sortOrder,
-            isVisible: true,
-          })),
-          skipDuplicates: true,
-        });
-      }
 
       await tx.organizationSetting.createMany({
         data: [

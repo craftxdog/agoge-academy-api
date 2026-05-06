@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -6,20 +7,24 @@ import { Prisma, PrismaClient } from '../generated/prisma/client';
 import {
   InvitationStatus,
   MemberStatus,
-  ModuleStatus,
   NotificationType,
   PaymentFrequency,
   PaymentStatus,
   PaymentTransactionStatus,
   PlatformRole,
-  ScreenType,
   UserStatus,
 } from '../generated/prisma/enums';
-import { DEFAULT_CUSTOMER_PERMISSION_KEYS } from '../src/common/constants/rbac.constant';
-import { getDatabaseConfig } from '../src/config';
+import {
+  ensureSystemAccessCatalog,
+  ensureSystemRoles,
+  syncOrganizationAccessModel,
+} from '../src/common/utils/access-model-sync.util';
+
+const DEFAULT_DATABASE_URL =
+  'postgresql://postgres:postgres@localhost:5432/agoge?schema=public';
 
 const pool = new Pool({
-  connectionString: getDatabaseConfig().url,
+  connectionString: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
@@ -32,25 +37,6 @@ const DEMO_ORGANIZATION_NAME = 'Agoge Performance Club';
 const DEMO_TIMEZONE = 'America/Managua';
 const DEMO_LOCALE = 'es-NI';
 const DEMO_CURRENCY = 'USD';
-
-type SystemCatalogSeed = {
-  key: string;
-  name: string;
-  description: string;
-  sortOrder: number;
-  permissions: Array<{
-    key: string;
-    name: string;
-    description: string;
-  }>;
-  screens: Array<{
-    key: string;
-    name: string;
-    path: string;
-    requiredPermissionKey?: string;
-    sortOrder: number;
-  }>;
-};
 
 type DemoUserSeed = {
   email: string;
@@ -70,266 +56,6 @@ type DemoUserSeed = {
     end: string;
   }>;
 };
-
-const SYSTEM_CATALOG: SystemCatalogSeed[] = [
-  {
-    key: 'settings',
-    name: 'Settings',
-    description: 'Company settings, branding, modules and permissions.',
-    sortOrder: 10,
-    permissions: [
-      {
-        key: 'settings.read',
-        name: 'Read settings',
-        description: 'View company settings.',
-      },
-      {
-        key: 'settings.write',
-        name: 'Write settings',
-        description: 'Update company settings.',
-      },
-      {
-        key: 'modules.manage',
-        name: 'Manage modules',
-        description: 'Enable modules and screens.',
-      },
-      {
-        key: 'roles.manage',
-        name: 'Manage roles',
-        description: 'Create roles and assign permissions.',
-      },
-    ],
-    screens: [
-      {
-        key: 'general',
-        name: 'General Settings',
-        path: '/settings/general',
-        requiredPermissionKey: 'settings.read',
-        sortOrder: 10,
-      },
-      {
-        key: 'roles',
-        name: 'Roles and Permissions',
-        path: '/settings/roles',
-        requiredPermissionKey: 'roles.manage',
-        sortOrder: 20,
-      },
-      {
-        key: 'modules',
-        name: 'Modules and Screens',
-        path: '/settings/modules',
-        requiredPermissionKey: 'modules.manage',
-        sortOrder: 30,
-      },
-    ],
-  },
-  {
-    key: 'users',
-    name: 'Users',
-    description: 'Members, invitations and user administration.',
-    sortOrder: 20,
-    permissions: [
-      {
-        key: 'users.read',
-        name: 'Read users',
-        description: 'View members and invitations.',
-      },
-      {
-        key: 'users.write',
-        name: 'Write users',
-        description: 'Create and update members.',
-      },
-    ],
-    screens: [
-      {
-        key: 'members',
-        name: 'Members',
-        path: '/users/members',
-        requiredPermissionKey: 'users.read',
-        sortOrder: 10,
-      },
-    ],
-  },
-  {
-    key: 'billing',
-    name: 'Billing',
-    description: 'Payment types, methods, invoices and transactions.',
-    sortOrder: 30,
-    permissions: [
-      {
-        key: 'billing.read',
-        name: 'Read billing',
-        description: 'View tenant payments, charges and billing settings.',
-      },
-      {
-        key: 'billing.self.read',
-        name: 'Read own billing',
-        description: 'View personal payments and billing activity.',
-      },
-      {
-        key: 'billing.write',
-        name: 'Write billing',
-        description: 'Create payments and update payment settings.',
-      },
-    ],
-    screens: [
-      {
-        key: 'payments',
-        name: 'Payments',
-        path: '/billing/payments',
-        requiredPermissionKey: 'billing.read',
-        sortOrder: 10,
-      },
-      {
-        key: 'my-payments',
-        name: 'My Payments',
-        path: '/billing/me/payments',
-        requiredPermissionKey: 'billing.self.read',
-        sortOrder: 15,
-      },
-      {
-        key: 'payment-settings',
-        name: 'Payment Settings',
-        path: '/billing/settings',
-        requiredPermissionKey: 'billing.write',
-        sortOrder: 20,
-      },
-    ],
-  },
-  {
-    key: 'schedules',
-    name: 'Schedules',
-    description: 'Business hours, exceptions and member schedules.',
-    sortOrder: 40,
-    permissions: [
-      {
-        key: 'schedules.read',
-        name: 'Read schedules',
-        description:
-          'View organization schedules, locations, exceptions and member availability.',
-      },
-      {
-        key: 'schedules.self.read',
-        name: 'Read own schedules',
-        description: 'View personal schedule availability.',
-      },
-      {
-        key: 'schedules.write',
-        name: 'Write schedules',
-        description: 'Update schedules and business hours.',
-      },
-    ],
-    screens: [
-      {
-        key: 'business-hours',
-        name: 'Business Hours',
-        path: '/schedules/business-hours',
-        requiredPermissionKey: 'schedules.read',
-        sortOrder: 10,
-      },
-      {
-        key: 'my-availability',
-        name: 'My Availability',
-        path: '/schedules/me/availability',
-        requiredPermissionKey: 'schedules.self.read',
-        sortOrder: 15,
-      },
-    ],
-  },
-  {
-    key: 'notifications',
-    name: 'Notifications',
-    description: 'Tenant-scoped notifications.',
-    sortOrder: 50,
-    permissions: [
-      {
-        key: 'notifications.read',
-        name: 'Read notifications',
-        description: 'View the shared tenant inbox.',
-      },
-      {
-        key: 'notifications.self.read',
-        name: 'Read own activity',
-        description: 'View personal activity notifications.',
-      },
-    ],
-    screens: [
-      {
-        key: 'inbox',
-        name: 'Notifications',
-        path: '/notifications',
-        requiredPermissionKey: 'notifications.read',
-        sortOrder: 10,
-      },
-      {
-        key: 'activity',
-        name: 'My Activity',
-        path: '/activity',
-        requiredPermissionKey: 'notifications.self.read',
-        sortOrder: 15,
-      },
-    ],
-  },
-  {
-    key: 'audit',
-    name: 'Audit',
-    description: 'Security and moderation activity trail.',
-    sortOrder: 60,
-    permissions: [
-      {
-        key: 'audit.read',
-        name: 'Read audit logs',
-        description: 'View audit logs and moderation trail.',
-      },
-    ],
-    screens: [
-      {
-        key: 'activity',
-        name: 'Activity',
-        path: '/audit/activity',
-        requiredPermissionKey: 'audit.read',
-        sortOrder: 10,
-      },
-    ],
-  },
-  {
-    key: 'analytics',
-    name: 'Analytics',
-    description:
-      'Executive dashboards, revenue intelligence and operational insights.',
-    sortOrder: 70,
-    permissions: [
-      {
-        key: 'analytics.read',
-        name: 'Read analytics',
-        description:
-          'View tenant-wide analytics dashboards and business insights.',
-      },
-      {
-        key: 'analytics.self.read',
-        name: 'Read own analytics',
-        description:
-          'View personal self-service analytics such as own balances, availability and activity.',
-      },
-    ],
-    screens: [
-      {
-        key: 'dashboard',
-        name: 'Analytics Dashboard',
-        path: '/analytics/dashboard',
-        requiredPermissionKey: 'analytics.read',
-        sortOrder: 10,
-      },
-      {
-        key: 'my-dashboard',
-        name: 'My Dashboard',
-        path: '/analytics/me/dashboard',
-        requiredPermissionKey: 'analytics.self.read',
-        sortOrder: 15,
-      },
-    ],
-  },
-];
 
 const DEMO_USERS: DemoUserSeed[] = [
   {
@@ -580,66 +306,9 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function ensureSystemCatalog() {
-  for (const moduleSeed of SYSTEM_CATALOG) {
-    const moduleRecord = await prisma.appModule.upsert({
-      where: { key: moduleSeed.key },
-      create: {
-        key: moduleSeed.key,
-        name: moduleSeed.name,
-        description: moduleSeed.description,
-        sortOrder: moduleSeed.sortOrder,
-        status: ModuleStatus.ACTIVE,
-      },
-      update: {
-        name: moduleSeed.name,
-        description: moduleSeed.description,
-        sortOrder: moduleSeed.sortOrder,
-        status: ModuleStatus.ACTIVE,
-      },
-    });
-
-    for (const permission of moduleSeed.permissions) {
-      await prisma.permission.upsert({
-        where: { key: permission.key },
-        create: {
-          moduleId: moduleRecord.id,
-          key: permission.key,
-          name: permission.name,
-          description: permission.description,
-        },
-        update: {
-          moduleId: moduleRecord.id,
-          name: permission.name,
-          description: permission.description,
-        },
-      });
-    }
-
-    for (const screen of moduleSeed.screens) {
-      await prisma.appScreen.upsert({
-        where: {
-          moduleId_key: {
-            moduleId: moduleRecord.id,
-            key: screen.key,
-          },
-        },
-        create: {
-          moduleId: moduleRecord.id,
-          key: screen.key,
-          name: screen.name,
-          path: screen.path,
-          requiredPermissionKey: screen.requiredPermissionKey,
-          sortOrder: screen.sortOrder,
-        },
-        update: {
-          name: screen.name,
-          path: screen.path,
-          requiredPermissionKey: screen.requiredPermissionKey,
-          sortOrder: screen.sortOrder,
-        },
-      });
-    }
-  }
+  await prisma.$transaction(async (tx) => {
+    await ensureSystemAccessCatalog(tx);
+  });
 
   const [modules, permissions] = await Promise.all([
     prisma.appModule.findMany({
@@ -669,14 +338,6 @@ async function recreateDemoOrganization() {
   }
 
   const systemCatalog = await ensureSystemCatalog();
-  const appScreens = await prisma.appScreen.findMany({
-    include: { module: true },
-    orderBy: [
-      { module: { sortOrder: 'asc' } },
-      { sortOrder: 'asc' },
-      { key: 'asc' },
-    ],
-  });
 
   const organization = await prisma.organization.create({
     data: {
@@ -749,28 +410,11 @@ async function recreateDemoOrganization() {
     ],
   });
 
-  await prisma.organizationModule.createMany({
-    data: systemCatalog.modules.map((module) => ({
-      organizationId: organization.id,
-      moduleId: module.id,
-      isEnabled: true,
-      sortOrder: module.sortOrder,
-    })),
-  });
-
-  await prisma.organizationScreen.createMany({
-    data: appScreens.map((screen) => ({
-      organizationId: organization.id,
-      appScreenId: screen.id,
-      moduleId: screen.moduleId,
-      key: `${screen.module.key}.${screen.key}`,
-      title: screen.name,
-      path: screen.path,
-      type: ScreenType.SYSTEM,
-      requiredPermissionKey: screen.requiredPermissionKey,
-      sortOrder: screen.sortOrder,
-      isVisible: true,
-    })),
+  await prisma.$transaction(async (tx) => {
+    await syncOrganizationAccessModel(tx, organization.id, {
+      forceVisibleSystemScreens: true,
+    });
+    await ensureSystemRoles(tx, organization.id);
   });
 
   const locations = await createLocations(organization.id);
@@ -922,14 +566,6 @@ async function createRoles(
 ) {
   const roleSeeds = [
     {
-      key: 'admin',
-      name: 'Admin',
-      description: 'Full organization administration.',
-      isSystem: true,
-      isDefault: false,
-      permissionKeys: Array.from(permissionIds.keys()),
-    },
-    {
       key: 'coach',
       name: 'Coach',
       description:
@@ -962,17 +598,26 @@ async function createRoles(
         'analytics.read',
       ],
     },
-    {
-      key: 'customer',
-      name: 'Customer',
-      description: 'Default customer access.',
-      isSystem: true,
-      isDefault: true,
-      permissionKeys: [...DEFAULT_CUSTOMER_PERMISSION_KEYS],
-    },
   ];
 
   const roleMap = new Map<string, { id: string; key: string }>();
+
+  const existingSystemRoles = await prisma.role.findMany({
+    where: {
+      organizationId,
+      key: {
+        in: ['admin', 'customer'],
+      },
+    },
+    select: {
+      id: true,
+      key: true,
+    },
+  });
+
+  for (const role of existingSystemRoles) {
+    roleMap.set(role.key, { id: role.id, key: role.key });
+  }
 
   for (const roleSeed of roleSeeds) {
     const role = await prisma.role.create({

@@ -7,6 +7,10 @@ This project now includes an idempotent demo seed at `prisma/seed.ts` to populat
 - One fully configured organization: `agoge-performance-club`
 - Branding and organization settings
 - Full system catalog for modules, permissions and screens when the database was created with `db push`
+- Canonical system roles synchronized on every seed run:
+  - `admin` with all tenant-wide permissions
+  - `customer` with self-service-only permissions
+- Tenant module/screen records re-synchronized from the app catalog on every seed run
 - Ten members with real login credentials:
   - 4 workers
   - 6 customers
@@ -48,3 +52,10 @@ Customer accounts:
 ## Why the seed also creates system catalog data
 
 `prisma db push` synchronizes schema objects, but it does not execute the SQL data inserts that live in the migration files. Because this API depends on global records such as app modules, permissions and screens, the seed recreates those reference records when needed so a fresh environment is fully usable without hidden manual steps.
+
+The seed also repairs tenant drift for the demo workspace by re-syncing:
+
+- app catalog modules, permissions and screens
+- organization module enablement records
+- system screen metadata and visibility
+- protected system roles (`admin`, `customer`)

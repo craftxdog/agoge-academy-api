@@ -336,6 +336,12 @@ export class SettingsService {
       await this.assertPermissionExists(dto.requiredPermissionKey);
     }
 
+    await this.assertEnabledModuleRetainsVisibleScreen(
+      organizationId,
+      screen,
+      dto,
+    );
+
     const updatedScreen = await this.settingsRepository.updateScreen({
       organizationId,
       screenId,
@@ -443,6 +449,40 @@ export class SettingsService {
     if (!exists) {
       throw new BadRequestException('Required permission key does not exist');
     }
+  }
+
+  private async assertEnabledModuleRetainsVisibleScreen(
+    organizationId: string,
+    screen: SettingsScreenRecord,
+    dto: UpdateOrganizationScreenDto,
+  ): Promise<void> {
+    if (dto.isVisible !== false || !screen.moduleId || !screen.isVisible) {
+      return;
+    }
+
+    const module = await this.settingsRepository.findModuleById(
+      organizationId,
+      screen.moduleId,
+    );
+
+    if (!module?.isEnabled) {
+      return;
+    }
+
+    const remainingVisibleScreens =
+      await this.settingsRepository.countVisibleScreensByModule({
+        organizationId,
+        moduleId: screen.moduleId,
+        excludeScreenId: screen.id,
+      });
+
+    if (remainingVisibleScreens > 0) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      `Cannot hide the last visible screen of the enabled ${screen.module?.key ?? 'module'} module`,
+    );
   }
 
   private normalizeSetting(

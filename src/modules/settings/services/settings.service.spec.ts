@@ -61,6 +61,8 @@ describe('SettingsService', () => {
     findModules: jest.fn(),
     appModuleExists: jest.fn(),
     permissionExists: jest.fn(),
+    findModuleById: jest.fn(),
+    countVisibleScreensByModule: jest.fn(),
     updateModule: jest.fn(),
     findScreens: jest.fn(),
     createScreen: jest.fn(),
@@ -138,6 +140,39 @@ describe('SettingsService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(repository.deleteScreen).not.toHaveBeenCalled();
+  });
+
+  it('prevents hiding the last visible screen of an enabled module', async () => {
+    repository.findScreenById.mockResolvedValue(createScreen());
+    repository.findModuleById.mockResolvedValue({
+      id: 'organization-module-id',
+      organizationId: 'organization-id',
+      moduleId: 'module-id',
+      isEnabled: true,
+      config: null,
+      sortOrder: 10,
+      createdAt: new Date('2026-04-20T00:00:00.000Z'),
+      updatedAt: new Date('2026-04-20T00:00:00.000Z'),
+      module: {
+        id: 'module-id',
+        key: 'users',
+        name: 'Users',
+        description: null,
+        status: 'ACTIVE',
+        sortOrder: 20,
+        createdAt: new Date('2026-04-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-04-20T00:00:00.000Z'),
+      },
+    });
+    repository.countVisibleScreensByModule.mockResolvedValue(0);
+
+    await expect(
+      service.updateScreen('organization-id', 'screen-id', {
+        isVisible: false,
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(repository.updateScreen).not.toHaveBeenCalled();
   });
 
   it('clears stored asset key when logo url is removed manually', async () => {

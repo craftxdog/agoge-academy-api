@@ -186,6 +186,36 @@ export class SettingsRepository {
     return count > 0;
   }
 
+  findModuleById(
+    organizationId: string,
+    moduleId: string,
+  ): Promise<SettingsModuleRecord | null> {
+    return this.prisma.organizationModule.findFirst({
+      where: {
+        organizationId,
+        moduleId,
+      },
+      include: organizationModuleInclude,
+    });
+  }
+
+  countVisibleScreensByModule(params: {
+    organizationId: string;
+    moduleId: string;
+    excludeScreenId?: string;
+  }): Promise<number> {
+    return this.prisma.organizationScreen.count({
+      where: {
+        organizationId: params.organizationId,
+        moduleId: params.moduleId,
+        isVisible: true,
+        ...(params.excludeScreenId && {
+          id: { not: params.excludeScreenId },
+        }),
+      },
+    });
+  }
+
   async updateModule(params: {
     organizationId: string;
     moduleKey: string;
