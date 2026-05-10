@@ -104,87 +104,92 @@ export class AuthRepository {
   }): Promise<AuthUserRecord> {
     const { dto, slug, passwordHash, existingUserId } = params;
 
-    return this.prisma.$transaction(async (tx) => {
-      const user = existingUserId
-        ? await tx.user.findUniqueOrThrow({
-            where: { id: existingUserId },
-            select: { id: true },
-          })
-        : await tx.user.create({
-            data: {
-              email: dto.email.toLowerCase(),
-              username: dto.username?.toLowerCase(),
-              passwordHash: passwordHash!,
-              firstName: dto.firstName,
-              lastName: dto.lastName,
-              platformRole: PlatformRole.USER,
-              status: UserStatus.ACTIVE,
+    return this.prisma.$transaction(
+      async (tx) => {
+        const user = existingUserId
+          ? await tx.user.findUniqueOrThrow({
+              where: { id: existingUserId },
+              select: { id: true },
+            })
+          : await tx.user.create({
+              data: {
+                email: dto.email.toLowerCase(),
+                username: dto.username?.toLowerCase(),
+                passwordHash: passwordHash!,
+                firstName: dto.firstName,
+                lastName: dto.lastName,
+                platformRole: PlatformRole.USER,
+                status: UserStatus.ACTIVE,
+              },
+              select: { id: true },
+            });
+
+        const organization = await tx.organization.create({
+          data: {
+            slug,
+            name: dto.organizationName,
+            timezone: dto.timezone ?? 'America/Managua',
+            locale: dto.locale ?? 'es-NI',
+            defaultCurrency: dto.currency ?? 'USD',
+          },
+        });
+
+        const member = await tx.organizationMember.create({
+          data: {
+            organizationId: organization.id,
+            userId: user.id,
+            status: MemberStatus.ACTIVE,
+            phone: dto.phone,
+            documentId: dto.documentId,
+            joinedAt: new Date(),
+          },
+        });
+
+        await ensureSystemAccessCatalog(tx);
+        await syncOrganizationAccessModel(tx, organization.id);
+        await ensureSystemRoles(tx, organization.id);
+
+        const adminRole = await tx.role.findFirstOrThrow({
+          where: {
+            organizationId: organization.id,
+            key: SYSTEM_ROLES.admin,
+          },
+          select: { id: true },
+        });
+
+        await tx.memberRole.create({
+          data: {
+            memberId: member.id,
+            roleId: adminRole.id,
+          },
+        });
+
+        await tx.organizationSetting.createMany({
+          data: [
+            {
+              organizationId: organization.id,
+              namespace: 'billing',
+              key: 'currency',
+              value: dto.currency ?? 'USD',
             },
-            select: { id: true },
-          });
+            {
+              organizationId: organization.id,
+              namespace: 'security',
+              key: 'require_2fa_for_admins',
+              value: false,
+            },
+          ],
+          skipDuplicates: true,
+        });
 
-      const organization = await tx.organization.create({
-        data: {
-          slug,
-          name: dto.organizationName,
-          timezone: dto.timezone ?? 'America/Managua',
-          locale: dto.locale ?? 'es-NI',
-          defaultCurrency: dto.currency ?? 'USD',
-        },
-      });
-
-      const member = await tx.organizationMember.create({
-        data: {
-          organizationId: organization.id,
-          userId: user.id,
-          status: MemberStatus.ACTIVE,
-          phone: dto.phone,
-          documentId: dto.documentId,
-          joinedAt: new Date(),
-        },
-      });
-
-      await ensureSystemAccessCatalog(tx);
-      await syncOrganizationAccessModel(tx, organization.id);
-      await ensureSystemRoles(tx, organization.id);
-
-      const adminRole = await tx.role.findFirstOrThrow({
-        where: {
-          organizationId: organization.id,
-          key: SYSTEM_ROLES.admin,
-        },
-        select: { id: true },
-      });
-
-      await tx.memberRole.create({
-        data: {
-          memberId: member.id,
-          roleId: adminRole.id,
-        },
-      });
-
-      await tx.organizationSetting.createMany({
-        data: [
-          {
-            organizationId: organization.id,
-            namespace: 'billing',
-            key: 'currency',
-            value: dto.currency ?? 'USD',
-          },
-          {
-            organizationId: organization.id,
-            namespace: 'security',
-            key: 'require_2fa_for_admins',
-            value: false,
-          },
-        ],
-        skipDuplicates: true,
-      });
-
-      return tx.user.findUniqueOrThrow({
-        where: { id: user.id },
-        include: authUserInclude,
-      });
-    });
+        return tx.user.findUniqueOrThrow({
+          where: { id: user.id },
+          include: authUserInclude,
+        });
+      },
+      {
+        timeout: 20_000,
+      },
+    );
   }
 }
