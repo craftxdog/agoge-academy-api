@@ -36,6 +36,19 @@ canAccessEndpoint =
   hasRequiredPermissionIfRequired
 ```
 
+Antes de caer al permiso decorado en código, la API consulta la matriz dinámica `endpoint_permission_rules`.
+
+Si existe una regla activa para `method + path`, esa matriz define los permisos válidos para la ruta con semántica OR:
+
+```ts
+canAccessEndpoint =
+  hasActiveMembership &&
+  moduleIsEnabledIfRequired &&
+  hasAnyEndpointRulePermission
+```
+
+Esto permite crear permisos finos, asignarlos a roles y conectarlos a rutas sin editar controladores.
+
 ## 3. Regla crítica para frontend
 
 No se debe construir navegación ni visibilidad solo a partir de `permissions`.
@@ -220,6 +233,14 @@ Permisos:
 
 - `billing.read`
 - `billing.write`
+- `billing.cobros`: lectura operativa de cobros y transacciones.
+- `billing.payments.create`: crear cobros a miembros.
+- `billing.payments.update`: actualizar ciclo de vida/metadatos de cobros.
+- `billing.transactions.create`: registrar transacciones.
+- `billing.stable`: operación de cobros de miembros sin gestionar conceptos ni métodos.
+- `billing.payment-types.manage`: gestionar conceptos.
+- `billing.payment-methods.manage`: gestionar métodos.
+- `billing.catalog.manage`: gestionar conceptos y métodos.
 
 #### Self surfaces
 
@@ -252,7 +273,12 @@ Permiso:
 Permisos:
 
 - `schedules.read`
-- `schedules.write`
+- `schedules.write`: escritura completa de schedules, incluyendo sedes, business hours, excepciones y disponibilidad de miembros.
+- `schedules.locations.manage`: gestionar sedes.
+- `schedules.business-hours.manage`: gestionar horarios de negocio.
+- `schedules.exceptions.manage`: gestionar excepciones.
+- `schedules.availability.manage`: gestionar disponibilidad de miembros.
+- `schedules.stable`: escritura limitada a disponibilidad de miembros. Permite crear, reemplazar, actualizar y borrar horarios de usuarios sin administrar sedes, horarios de negocio ni excepciones.
 
 #### Self surfaces
 
@@ -345,6 +371,16 @@ Son módulos administrativos tenant.
 
 No deben mostrarse a clientes self-service salvo que el producto defina un caso explícito diferente.
 
+Permisos finos de users:
+
+- `users.members.create` / `member.create`: crear o agregar miembros.
+- `users.members.update`: editar perfil de miembro.
+- `users.members.status.manage`: suspender o reactivar miembros.
+- `users.members.remove`: remover miembros.
+- `users.invitations.create`: crear invitaciones.
+- `users.invitations.revoke`: revocar invitaciones.
+- `users.write`: escritura completa del módulo users.
+
 ## 10. Access matrix vs navigation
 
 ### `GET /api/v1/rbac/access-matrix`
@@ -388,6 +424,23 @@ El backend ahora expone `accessScope` para que frontend sepa si la pantalla es:
 - `customer` está protegido.
 - solo un rol por tenant debería actuar como default.
 - un permiso puede existir aunque el módulo no esté habilitado, pero el acceso real seguirá fallando si el endpoint exige módulo.
+- un permiso creado en catálogo no abre endpoints por sí solo; debe asignarse a un rol y conectarse a una ruta en `endpoint_permission_rules`.
+
+### Matriz dinámica de endpoint permissions
+
+Endpoints administrativos:
+
+- `GET /api/v1/rbac/endpoint-rules`
+- `POST /api/v1/rbac/endpoint-rules`
+- `DELETE /api/v1/rbac/endpoint-rules/:ruleId`
+
+Cada regla conecta:
+
+- método HTTP,
+- path sin prefijo global, por ejemplo `/billing/payments/:paymentId/transactions`,
+- permiso requerido.
+
+Si una ruta tiene varias reglas, basta con que el miembro tenga una de ellas.
 
 ### Recomendación fuerte para frontend admin
 

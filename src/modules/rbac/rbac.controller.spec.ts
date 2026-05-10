@@ -13,6 +13,9 @@ describe('RbacController', () => {
     getMemberRoles: jest.fn(),
     replaceMemberRoles: jest.fn(),
     getAccessMatrix: jest.fn(),
+    listEndpointPermissionRules: jest.fn(),
+    createEndpointPermissionRule: jest.fn(),
+    deleteEndpointPermissionRule: jest.fn(),
   };
   let controller: RbacController;
 
@@ -108,5 +111,27 @@ describe('RbacController', () => {
       'member-id',
       { roleKeys: ['admin'] },
     );
+  });
+
+  it('delegates endpoint permission rule requests', async () => {
+    const response = { id: 'rule-id' };
+    const dto = {
+      method: 'POST',
+      pathPattern: '/billing/payments',
+      permissionKey: 'billing.payments.create',
+    };
+    rbacService.listEndpointPermissionRules.mockResolvedValue([response]);
+    rbacService.createEndpointPermissionRule.mockResolvedValue(response);
+    rbacService.deleteEndpointPermissionRule.mockResolvedValue(response);
+
+    await expect(controller.listEndpointPermissionRules()).resolves.toEqual([
+      response,
+    ]);
+    await expect(
+      controller.createEndpointPermissionRule('organization-id', dto as never),
+    ).resolves.toBe(response);
+    await expect(
+      controller.deleteEndpointPermissionRule('organization-id', 'rule-id'),
+    ).resolves.toBe(response);
   });
 });

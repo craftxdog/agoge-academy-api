@@ -11,8 +11,10 @@ import {
   SYSTEM_ROLES,
 } from '../../../common';
 import {
+  CreateEndpointPermissionRuleDto,
   CreatePermissionDto,
   CreateRoleDto,
+  EndpointPermissionRuleResponseDto,
   RbacAccessMatrixResponseDto,
   RbacNavigationResponseDto,
   RbacMemberRoleResponseDto,
@@ -26,6 +28,7 @@ import {
 } from '../dto';
 import {
   RbacAccessModuleRecord,
+  RbacEndpointPermissionRuleRecord,
   RbacMemberRoleRecord,
   RbacPermissionRecord,
   RbacRepository,
@@ -86,7 +89,12 @@ export class RbacService {
       action: 'created',
       entityId: response.id,
       data: response,
-      invalidate: ['rbac.permissions', 'rbac.roles', 'rbac.access-matrix'],
+      invalidate: [
+        'rbac.permissions',
+        'rbac.roles',
+        'rbac.access-matrix',
+        'rbac.navigation',
+      ],
     });
 
     return response;
@@ -144,7 +152,7 @@ export class RbacService {
       action: 'created',
       entityId: response.id,
       data: response,
-      invalidate: ['rbac.roles', 'rbac.access-matrix'],
+      invalidate: ['rbac.roles', 'rbac.access-matrix', 'rbac.navigation'],
     });
 
     return response;
@@ -205,7 +213,7 @@ export class RbacService {
       action: 'permissions.replaced',
       entityId: response.id,
       data: response,
-      invalidate: ['rbac.roles', 'rbac.access-matrix'],
+      invalidate: ['rbac.roles', 'rbac.access-matrix', 'rbac.navigation'],
     });
 
     return response;
@@ -276,7 +284,12 @@ export class RbacService {
       action: 'roles.replaced',
       entityId: response.memberId,
       data: response,
-      invalidate: ['rbac.member-roles', 'rbac.access-matrix', 'users.members'],
+      invalidate: [
+        'rbac.member-roles',
+        'rbac.access-matrix',
+        'rbac.navigation',
+        'users.members',
+      ],
     });
 
     return response;
@@ -339,6 +352,66 @@ export class RbacService {
         })
         .filter((module) => module.screens.length > 0),
     };
+  }
+
+  async listEndpointPermissionRules(): Promise<
+    EndpointPermissionRuleResponseDto[]
+  > {
+    const rules = await this.rbacRepository.findEndpointPermissionRules();
+
+    return rules.map((rule) => this.mapEndpointPermissionRule(rule));
+  }
+
+  async createEndpointPermissionRule(
+    organizationId: string,
+    dto: CreateEndpointPermissionRuleDto,
+  ): Promise<EndpointPermissionRuleResponseDto> {
+    const permissionKey = this.normalizeKey(dto.permissionKey);
+    await this.assertPermissionsExist([permissionKey]);
+
+    const rule = await this.rbacRepository.upsertEndpointPermissionRule({
+      method: dto.method.trim().toUpperCase(),
+      pathPattern: this.normalizePathPattern(dto.pathPattern),
+      permissionKey,
+      description: dto.description?.trim(),
+      isActive: dto.isActive,
+    });
+    const response = this.mapEndpointPermissionRule(rule);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'endpoint-permission-rule',
+      action: 'upserted',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.endpoint-rules', 'rbac.navigation'],
+    });
+
+    return response;
+  }
+
+  async deleteEndpointPermissionRule(
+    organizationId: string,
+    ruleId: string,
+  ): Promise<EndpointPermissionRuleResponseDto> {
+    const rule = await this.rbacRepository.deleteEndpointPermissionRule(ruleId);
+
+    if (!rule) {
+      throw new NotFoundException('Endpoint permission rule was not found');
+    }
+
+    const response = this.mapEndpointPermissionRule(rule);
+
+    this.emitRbacEvent({
+      organizationId,
+      resource: 'endpoint-permission-rule',
+      action: 'deleted',
+      entityId: response.id,
+      data: response,
+      invalidate: ['rbac.endpoint-rules', 'rbac.navigation'],
+    });
+
+    return response;
   }
 
   private async getRoleOrThrow(
@@ -424,6 +497,12 @@ export class RbacService {
     return key.trim().toLowerCase();
   }
 
+  private normalizePathPattern(pathPattern: string): string {
+    const normalized = pathPattern.trim().replace(/\/+$/, '');
+
+    return normalized || '/';
+  }
+
   private normalizeUniqueList(values: string[]): string[] {
     return [...new Set(values.map((value) => this.normalizeKey(value)))];
   }
@@ -499,6 +578,21 @@ export class RbacService {
           screen.requiredPermissionKey,
         ),
       })),
+    };
+  }
+
+  private mapEndpointPermissionRule(
+    rule: RbacEndpointPermissionRuleRecord,
+  ): EndpointPermissionRuleResponseDto {
+    return {
+      id: rule.id,
+      method: rule.method,
+      pathPattern: rule.pathPattern,
+      permissionKey: rule.permissionKey,
+      description: rule.description,
+      isActive: rule.isActive,
+      createdAt: rule.createdAt,
+      updatedAt: rule.updatedAt,
     };
   }
 

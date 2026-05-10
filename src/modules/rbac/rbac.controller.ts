@@ -32,8 +32,10 @@ import {
   TenantGuard,
 } from '../../common';
 import {
+  CreateEndpointPermissionRuleDto,
   CreatePermissionDto,
   CreateRoleDto,
+  EndpointPermissionRuleResponseDto,
   RbacAccessMatrixResponseDto,
   RbacMemberRoleResponseDto,
   RbacPermissionQueryDto,
@@ -211,5 +213,47 @@ export class RbacController {
   @ApiOkResponse({ type: RbacAccessMatrixResponseDto })
   getAccessMatrix(@CurrentOrganization('id') organizationId: string) {
     return this.rbacService.getAccessMatrix(organizationId);
+  }
+
+  @Get('endpoint-rules')
+  @ApiOperation({
+    summary: 'List endpoint permission rules',
+    description:
+      'Returns the dynamic method/path-to-permission matrix used by the permission guard before decorator fallbacks.',
+  })
+  @ApiOkResponse({ type: [EndpointPermissionRuleResponseDto] })
+  listEndpointPermissionRules() {
+    return this.rbacService.listEndpointPermissionRules();
+  }
+
+  @Post('endpoint-rules')
+  @ApiOperation({
+    summary: 'Create or update an endpoint permission rule',
+    description:
+      'Links a permission key to one API route pattern. Multiple rules on the same method/path are evaluated as OR.',
+  })
+  @ApiCreatedResponse({ type: EndpointPermissionRuleResponseDto })
+  createEndpointPermissionRule(
+    @CurrentOrganization('id') organizationId: string,
+    @Body() dto: CreateEndpointPermissionRuleDto,
+  ) {
+    return this.rbacService.createEndpointPermissionRule(organizationId, dto);
+  }
+
+  @Delete('endpoint-rules/:ruleId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Delete an endpoint permission rule',
+  })
+  @ApiParam({ name: 'ruleId', format: 'uuid' })
+  @ApiOkResponse({ type: EndpointPermissionRuleResponseDto })
+  deleteEndpointPermissionRule(
+    @CurrentOrganization('id') organizationId: string,
+    @Param('ruleId') ruleId: string,
+  ) {
+    return this.rbacService.deleteEndpointPermissionRule(
+      organizationId,
+      ruleId,
+    );
   }
 }

@@ -295,14 +295,35 @@ model Permission {
   name        String
   description String?
 
-  module AppModule?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  roles  RolePermission[]
+  module        AppModule?                @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  roles         RolePermission[]
+  endpointRules EndpointPermissionRule[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([moduleId])
   @@map("permissions")
+}
+
+model EndpointPermissionRule {
+  id String @id @default(uuid()) @db.Uuid
+
+  method        String  @db.VarChar(12)
+  pathPattern   String  @map("path_pattern") @db.VarChar(300)
+  permissionKey String  @map("permission_key") @db.VarChar(120)
+  description   String?
+  isActive      Boolean @default(true) @map("is_active")
+
+  permission Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([method, pathPattern, permissionKey])
+  @@index([method, isActive])
+  @@index([permissionKey])
+  @@map("endpoint_permission_rules")
 }
 
 model RolePermission {

@@ -21,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  AnyPermissions,
   CurrentMember,
   CurrentOrganization,
   JwtAuthGuard,
@@ -323,7 +324,10 @@ export class SchedulesController {
   }
 
   @Post('members/:memberId/availability')
-  @Permissions(SYSTEM_PERMISSIONS.schedulesWrite)
+  @AnyPermissions(
+    SYSTEM_PERMISSIONS.schedulesWrite,
+    SYSTEM_PERMISSIONS.schedulesStable,
+  )
   @ApiOperation({
     summary: 'Create member availability',
     description:
@@ -344,7 +348,10 @@ export class SchedulesController {
   }
 
   @Put('members/:memberId/availability')
-  @Permissions(SYSTEM_PERMISSIONS.schedulesWrite)
+  @AnyPermissions(
+    SYSTEM_PERMISSIONS.schedulesWrite,
+    SYSTEM_PERMISSIONS.schedulesStable,
+  )
   @ApiOperation({
     summary: 'Replace member availability',
     description:
@@ -365,7 +372,10 @@ export class SchedulesController {
   }
 
   @Patch('availability/:scheduleId')
-  @Permissions(SYSTEM_PERMISSIONS.schedulesWrite)
+  @AnyPermissions(
+    SYSTEM_PERMISSIONS.schedulesWrite,
+    SYSTEM_PERMISSIONS.schedulesStable,
+  )
   @ApiOperation({ summary: 'Update one member availability window' })
   @ApiParam({ name: 'scheduleId', format: 'uuid' })
   @ApiOkResponse({ type: MemberScheduleResponseDto })
@@ -383,7 +393,10 @@ export class SchedulesController {
 
   @Delete('availability/:scheduleId')
   @HttpCode(HttpStatus.OK)
-  @Permissions(SYSTEM_PERMISSIONS.schedulesWrite)
+  @AnyPermissions(
+    SYSTEM_PERMISSIONS.schedulesWrite,
+    SYSTEM_PERMISSIONS.schedulesStable,
+  )
   @ApiOperation({ summary: 'Delete one member availability window' })
   @ApiParam({ name: 'scheduleId', format: 'uuid' })
   @ApiOkResponse({ type: MemberScheduleResponseDto })

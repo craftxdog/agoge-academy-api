@@ -3,6 +3,7 @@ import { ScreenType } from '../../../generated/prisma/enums';
 import {
   buildSystemRoleDefinitions,
   SYSTEM_ACCESS_CATALOG,
+  SYSTEM_ENDPOINT_PERMISSION_RULES,
   SYSTEM_MODULE_STATUS,
 } from '../constants/access-model.constant';
 
@@ -69,6 +70,43 @@ export async function ensureSystemAccessCatalog(
           sortOrder: screenDefinition.sortOrder,
         },
       });
+    }
+  }
+
+  await syncEndpointPermissionRules(prisma);
+}
+
+async function syncEndpointPermissionRules(
+  prisma: AccessModelPrismaClient,
+): Promise<void> {
+  for (const rule of SYSTEM_ENDPOINT_PERMISSION_RULES) {
+    for (const permissionKey of rule.permissionKeys) {
+      await prisma.$executeRaw`
+        INSERT INTO "endpoint_permission_rules" (
+          "id",
+          "method",
+          "path_pattern",
+          "permission_key",
+          "description",
+          "is_active",
+          "created_at",
+          "updated_at"
+        )
+        VALUES (
+          gen_random_uuid(),
+          ${rule.method.toUpperCase()},
+          ${rule.pathPattern},
+          ${permissionKey},
+          ${rule.description},
+          TRUE,
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+        ON CONFLICT ("method", "path_pattern", "permission_key") DO UPDATE SET
+          "description" = EXCLUDED."description",
+          "is_active" = TRUE,
+          "updated_at" = CURRENT_TIMESTAMP
+      `;
     }
   }
 }

@@ -78,6 +78,17 @@ export type RbacAccessModuleRecord = Prisma.OrganizationModuleGetPayload<{
   };
 }>;
 
+export type RbacEndpointPermissionRuleRecord = {
+  id: string;
+  method: string;
+  pathPattern: string;
+  permissionKey: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 @Injectable()
 export class RbacRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -460,5 +471,91 @@ export class RbacRepository {
       },
       orderBy: [{ sortOrder: 'asc' }],
     });
+  }
+
+  findEndpointPermissionRules(): Promise<RbacEndpointPermissionRuleRecord[]> {
+    return this.prisma.$queryRaw<RbacEndpointPermissionRuleRecord[]>`
+      SELECT
+        "id",
+        "method",
+        "path_pattern" AS "pathPattern",
+        "permission_key" AS "permissionKey",
+        "description",
+        "is_active" AS "isActive",
+        "created_at" AS "createdAt",
+        "updated_at" AS "updatedAt"
+      FROM "endpoint_permission_rules"
+      ORDER BY "method" ASC, "path_pattern" ASC, "permission_key" ASC
+    `;
+  }
+
+  async upsertEndpointPermissionRule(params: {
+    method: string;
+    pathPattern: string;
+    permissionKey: string;
+    description?: string | null;
+    isActive?: boolean;
+  }): Promise<RbacEndpointPermissionRuleRecord> {
+    const [rule] = await this.prisma.$queryRaw<
+      RbacEndpointPermissionRuleRecord[]
+    >`
+      INSERT INTO "endpoint_permission_rules" (
+        "id",
+        "method",
+        "path_pattern",
+        "permission_key",
+        "description",
+        "is_active",
+        "created_at",
+        "updated_at"
+      )
+      VALUES (
+        gen_random_uuid(),
+        ${params.method},
+        ${params.pathPattern},
+        ${params.permissionKey},
+        ${params.description ?? null},
+        ${params.isActive ?? true},
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT ("method", "path_pattern", "permission_key") DO UPDATE SET
+        "description" = EXCLUDED."description",
+        "is_active" = EXCLUDED."is_active",
+        "updated_at" = CURRENT_TIMESTAMP
+      RETURNING
+        "id",
+        "method",
+        "path_pattern" AS "pathPattern",
+        "permission_key" AS "permissionKey",
+        "description",
+        "is_active" AS "isActive",
+        "created_at" AS "createdAt",
+        "updated_at" AS "updatedAt"
+    `;
+
+    return rule;
+  }
+
+  async deleteEndpointPermissionRule(
+    ruleId: string,
+  ): Promise<RbacEndpointPermissionRuleRecord | null> {
+    const [rule] = await this.prisma.$queryRaw<
+      RbacEndpointPermissionRuleRecord[]
+    >`
+      DELETE FROM "endpoint_permission_rules"
+      WHERE "id" = ${ruleId}::uuid
+      RETURNING
+        "id",
+        "method",
+        "path_pattern" AS "pathPattern",
+        "permission_key" AS "permissionKey",
+        "description",
+        "is_active" AS "isActive",
+        "created_at" AS "createdAt",
+        "updated_at" AS "updatedAt"
+    `;
+
+    return rule ?? null;
   }
 }

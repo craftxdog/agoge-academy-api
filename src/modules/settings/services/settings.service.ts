@@ -262,6 +262,7 @@ export class SettingsService {
         'settings.modules',
         'settings.screens',
         'rbac.access-matrix',
+        'rbac.navigation',
         'analytics.operations',
         'analytics.dashboard',
       ],
@@ -314,7 +315,7 @@ export class SettingsService {
       action: 'created',
       entityId: response.id,
       data: response,
-      invalidate: ['settings.screens', 'rbac.access-matrix'],
+      invalidate: ['settings.screens', 'rbac.access-matrix', 'rbac.navigation'],
     });
 
     return response;
@@ -361,7 +362,7 @@ export class SettingsService {
       action: 'updated',
       entityId: response.id,
       data: response,
-      invalidate: ['settings.screens', 'rbac.access-matrix'],
+      invalidate: ['settings.screens', 'rbac.access-matrix', 'rbac.navigation'],
     });
 
     return response;
@@ -391,7 +392,7 @@ export class SettingsService {
       action: 'deleted',
       entityId: response.id,
       data: response,
-      invalidate: ['settings.screens', 'rbac.access-matrix'],
+      invalidate: ['settings.screens', 'rbac.access-matrix', 'rbac.navigation'],
     });
 
     return response;

@@ -32,6 +32,13 @@ export type SystemRoleDefinition = {
   permissionKeys: string[];
 };
 
+export type SystemEndpointPermissionRuleDefinition = {
+  method: string;
+  pathPattern: string;
+  permissionKeys: string[];
+  description: string;
+};
+
 export const SYSTEM_ACCESS_CATALOG: SystemCatalogModuleDefinition[] = [
   {
     key: 'settings',
@@ -96,6 +103,42 @@ export const SYSTEM_ACCESS_CATALOG: SystemCatalogModuleDefinition[] = [
         description: 'View members and invitations.',
       },
       {
+        key: 'users.members.create',
+        name: 'Create members',
+        description: 'Create or add tenant members without full user admin.',
+      },
+      {
+        key: 'users.members.update',
+        name: 'Update members',
+        description: 'Update tenant member profile details.',
+      },
+      {
+        key: 'users.members.status.manage',
+        name: 'Manage member status',
+        description: 'Suspend or reactivate tenant members.',
+      },
+      {
+        key: 'users.members.remove',
+        name: 'Remove members',
+        description: 'Remove tenant members.',
+      },
+      {
+        key: 'users.invitations.create',
+        name: 'Create invitations',
+        description: 'Create tenant invitations.',
+      },
+      {
+        key: 'users.invitations.revoke',
+        name: 'Revoke invitations',
+        description: 'Revoke pending tenant invitations.',
+      },
+      {
+        key: 'member.create',
+        name: 'Create members alias',
+        description:
+          'Alias permission for creating or adding tenant members from custom role builders.',
+      },
+      {
         key: 'users.write',
         name: 'Write users',
         description: 'Create and update members.',
@@ -126,6 +169,48 @@ export const SYSTEM_ACCESS_CATALOG: SystemCatalogModuleDefinition[] = [
         key: 'billing.self.read',
         name: 'Read own billing',
         description: 'View personal payments and billing activity.',
+      },
+      {
+        key: 'billing.cobros',
+        name: 'Billing Cobros',
+        description: 'View member payments and payment transactions.',
+      },
+      {
+        key: 'billing.payment-types.manage',
+        name: 'Manage payment concepts',
+        description: 'Create, update or archive payment concepts.',
+      },
+      {
+        key: 'billing.payment-methods.manage',
+        name: 'Manage payment methods',
+        description: 'Create, update or archive payment methods.',
+      },
+      {
+        key: 'billing.payments.create',
+        name: 'Create member payments',
+        description: 'Create payments or charges for tenant members.',
+      },
+      {
+        key: 'billing.payments.update',
+        name: 'Update member payments',
+        description:
+          'Update payment lifecycle, due dates and payment metadata.',
+      },
+      {
+        key: 'billing.transactions.create',
+        name: 'Record payment transactions',
+        description: 'Record payment transactions against member payments.',
+      },
+      {
+        key: 'billing.stable',
+        name: 'Billing Members',
+        description:
+          'Create member payments, record transactions and update member payment lifecycle without managing payment concepts or methods.',
+      },
+      {
+        key: 'billing.catalog.manage',
+        name: 'Manage billing catalog',
+        description: 'Create, update or archive payment concepts and methods.',
       },
       {
         key: 'billing.write',
@@ -173,6 +258,32 @@ export const SYSTEM_ACCESS_CATALOG: SystemCatalogModuleDefinition[] = [
         key: 'schedules.self.read',
         name: 'Read own schedules',
         description: 'View personal schedule availability.',
+      },
+      {
+        key: 'schedules.locations.manage',
+        name: 'Manage schedule locations',
+        description: 'Create, update or deactivate schedule locations.',
+      },
+      {
+        key: 'schedules.business-hours.manage',
+        name: 'Manage business hours',
+        description: 'Create, replace, update or delete business hours.',
+      },
+      {
+        key: 'schedules.exceptions.manage',
+        name: 'Manage schedule exceptions',
+        description: 'Create, update or delete schedule exceptions.',
+      },
+      {
+        key: 'schedules.availability.manage',
+        name: 'Manage member availability',
+        description: 'Create, replace, update or delete member availability.',
+      },
+      {
+        key: 'schedules.stable',
+        name: 'Add schedules for users',
+        description:
+          'Create, replace, update and delete member availability without managing tenant locations, business hours or exceptions.',
       },
       {
         key: 'schedules.write',
@@ -291,6 +402,265 @@ export const SYSTEM_ACCESS_CATALOG: SystemCatalogModuleDefinition[] = [
     ],
   },
 ];
+
+export const SYSTEM_ENDPOINT_PERMISSION_RULES: SystemEndpointPermissionRuleDefinition[] =
+  [
+    {
+      method: 'POST',
+      pathPattern: '/users/members',
+      permissionKeys: ['users.write', 'users.members.create', 'member.create'],
+      description: 'Create or add a tenant member.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/users/members/:memberId',
+      permissionKeys: ['users.write', 'users.members.update'],
+      description: 'Update tenant member profile.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/users/members/:memberId/status',
+      permissionKeys: ['users.write', 'users.members.status.manage'],
+      description: 'Suspend or reactivate a tenant member.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/users/members/:memberId',
+      permissionKeys: ['users.write', 'users.members.remove'],
+      description: 'Remove a tenant member.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/users/invitations',
+      permissionKeys: [
+        'users.write',
+        'users.invitations.create',
+        'users.members.create',
+        'member.create',
+      ],
+      description: 'Create a tenant invitation.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/users/invitations/:invitationId/revoke',
+      permissionKeys: ['users.write', 'users.invitations.revoke'],
+      description: 'Revoke a pending tenant invitation.',
+    },
+    {
+      method: 'GET',
+      pathPattern: '/billing/summary',
+      permissionKeys: ['billing.read', 'billing.cobros'],
+      description: 'View tenant billing summary.',
+    },
+    {
+      method: 'GET',
+      pathPattern: '/billing/payments',
+      permissionKeys: ['billing.read', 'billing.cobros'],
+      description: 'List tenant payments.',
+    },
+    {
+      method: 'GET',
+      pathPattern: '/billing/payments/:paymentId',
+      permissionKeys: ['billing.read', 'billing.cobros'],
+      description: 'View payment detail.',
+    },
+    {
+      method: 'GET',
+      pathPattern: '/billing/payments/:paymentId/transactions',
+      permissionKeys: ['billing.read', 'billing.cobros'],
+      description: 'List payment transactions.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/billing/payment-types',
+      permissionKeys: [
+        'billing.write',
+        'billing.catalog.manage',
+        'billing.payment-types.manage',
+      ],
+      description: 'Create a payment concept.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/billing/payment-types/:paymentTypeId',
+      permissionKeys: [
+        'billing.write',
+        'billing.catalog.manage',
+        'billing.payment-types.manage',
+      ],
+      description: 'Update a payment concept.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/billing/payment-types/:paymentTypeId',
+      permissionKeys: [
+        'billing.write',
+        'billing.catalog.manage',
+        'billing.payment-types.manage',
+      ],
+      description: 'Archive a payment concept.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/billing/payment-methods',
+      permissionKeys: [
+        'billing.write',
+        'billing.catalog.manage',
+        'billing.payment-methods.manage',
+      ],
+      description: 'Create a payment method.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/billing/payment-methods/:paymentMethodId',
+      permissionKeys: [
+        'billing.write',
+        'billing.catalog.manage',
+        'billing.payment-methods.manage',
+      ],
+      description: 'Update a payment method.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/billing/payment-methods/:paymentMethodId',
+      permissionKeys: [
+        'billing.write',
+        'billing.catalog.manage',
+        'billing.payment-methods.manage',
+      ],
+      description: 'Archive a payment method.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/billing/payments',
+      permissionKeys: [
+        'billing.write',
+        'billing.payments.create',
+        'billing.stable',
+      ],
+      description: 'Create a member payment.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/billing/payments/:paymentId',
+      permissionKeys: [
+        'billing.write',
+        'billing.payments.update',
+        'billing.stable',
+      ],
+      description: 'Update a member payment.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/billing/payments/:paymentId/transactions',
+      permissionKeys: [
+        'billing.write',
+        'billing.transactions.create',
+        'billing.stable',
+      ],
+      description: 'Record a payment transaction.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/schedules/locations',
+      permissionKeys: ['schedules.write', 'schedules.locations.manage'],
+      description: 'Create a schedule location.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/schedules/locations/:locationId',
+      permissionKeys: ['schedules.write', 'schedules.locations.manage'],
+      description: 'Update a schedule location.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/schedules/locations/:locationId',
+      permissionKeys: ['schedules.write', 'schedules.locations.manage'],
+      description: 'Delete or deactivate a schedule location.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/schedules/business-hours',
+      permissionKeys: ['schedules.write', 'schedules.business-hours.manage'],
+      description: 'Create a business-hour window.',
+    },
+    {
+      method: 'PUT',
+      pathPattern: '/schedules/business-hours',
+      permissionKeys: ['schedules.write', 'schedules.business-hours.manage'],
+      description: 'Replace business hours for one scope.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/schedules/business-hours/:businessHourId',
+      permissionKeys: ['schedules.write', 'schedules.business-hours.manage'],
+      description: 'Update a business-hour window.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/schedules/business-hours/:businessHourId',
+      permissionKeys: ['schedules.write', 'schedules.business-hours.manage'],
+      description: 'Delete a business-hour window.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/schedules/exceptions',
+      permissionKeys: ['schedules.write', 'schedules.exceptions.manage'],
+      description: 'Create a schedule exception.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/schedules/exceptions/:exceptionId',
+      permissionKeys: ['schedules.write', 'schedules.exceptions.manage'],
+      description: 'Update a schedule exception.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/schedules/exceptions/:exceptionId',
+      permissionKeys: ['schedules.write', 'schedules.exceptions.manage'],
+      description: 'Delete a schedule exception.',
+    },
+    {
+      method: 'POST',
+      pathPattern: '/schedules/members/:memberId/availability',
+      permissionKeys: [
+        'schedules.write',
+        'schedules.availability.manage',
+        'schedules.stable',
+      ],
+      description: 'Create member availability.',
+    },
+    {
+      method: 'PUT',
+      pathPattern: '/schedules/members/:memberId/availability',
+      permissionKeys: [
+        'schedules.write',
+        'schedules.availability.manage',
+        'schedules.stable',
+      ],
+      description: 'Replace member availability.',
+    },
+    {
+      method: 'PATCH',
+      pathPattern: '/schedules/availability/:scheduleId',
+      permissionKeys: [
+        'schedules.write',
+        'schedules.availability.manage',
+        'schedules.stable',
+      ],
+      description: 'Update one member availability window.',
+    },
+    {
+      method: 'DELETE',
+      pathPattern: '/schedules/availability/:scheduleId',
+      permissionKeys: [
+        'schedules.write',
+        'schedules.availability.manage',
+        'schedules.stable',
+      ],
+      description: 'Delete one member availability window.',
+    },
+  ];
 
 export const SYSTEM_MODULE_STATUS = ModuleStatus.ACTIVE;
 

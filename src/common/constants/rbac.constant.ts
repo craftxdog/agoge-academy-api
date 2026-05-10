@@ -1,6 +1,7 @@
 export const IS_PUBLIC_KEY = 'isPublic';
 export const ROLES_KEY = 'roles';
 export const PERMISSIONS_KEY = 'permissions';
+export const ANY_PERMISSIONS_KEY = 'anyPermissions';
 export const MODULES_KEY = 'modules';
 export const SKIP_TENANT_KEY = 'skipTenant';
 
@@ -25,12 +26,32 @@ export const SYSTEM_PERMISSIONS = {
   modulesManage: 'modules.manage',
   rolesManage: 'roles.manage',
   usersRead: 'users.read',
+  usersMembersCreate: 'users.members.create',
+  usersMembersUpdate: 'users.members.update',
+  usersMembersStatusManage: 'users.members.status.manage',
+  usersMembersRemove: 'users.members.remove',
+  usersInvitationsCreate: 'users.invitations.create',
+  usersInvitationsRevoke: 'users.invitations.revoke',
+  memberCreate: 'member.create',
   usersWrite: 'users.write',
   billingRead: 'billing.read',
   billingSelfRead: 'billing.self.read',
+  billingPaymentTypesManage: 'billing.payment-types.manage',
+  billingPaymentMethodsManage: 'billing.payment-methods.manage',
+  billingPaymentsCreate: 'billing.payments.create',
+  billingPaymentsUpdate: 'billing.payments.update',
+  billingTransactionsCreate: 'billing.transactions.create',
+  billingCatalogManage: 'billing.catalog.manage',
+  billingCobros: 'billing.cobros',
+  billingStable: 'billing.stable',
   billingWrite: 'billing.write',
   schedulesRead: 'schedules.read',
   schedulesSelfRead: 'schedules.self.read',
+  schedulesLocationsManage: 'schedules.locations.manage',
+  schedulesBusinessHoursManage: 'schedules.business-hours.manage',
+  schedulesExceptionsManage: 'schedules.exceptions.manage',
+  schedulesAvailabilityManage: 'schedules.availability.manage',
+  schedulesStable: 'schedules.stable',
   schedulesWrite: 'schedules.write',
   notificationsRead: 'notifications.read',
   notificationsSelfRead: 'notifications.self.read',
