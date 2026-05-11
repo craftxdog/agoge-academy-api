@@ -17,6 +17,10 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { AccessLogMiddleware } from './common/middleware/access-log.middleware';
 import { API_DOCS_PATH, APP_NAME, getAppConfig } from './config';
 
+const isSwaggerEnabled = (): boolean =>
+  process.env.NODE_ENV !== 'production' ||
+  process.env.SWAGGER_ENABLED?.toLowerCase() === 'true';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const appConfig = getAppConfig();
@@ -70,7 +74,7 @@ async function bootstrap() {
     new TransformInterceptor(),
   );
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (isSwaggerEnabled()) {
     const config = new DocumentBuilder()
       .setTitle(APP_NAME)
       .setDescription('Agoge Academy backend API documentation')

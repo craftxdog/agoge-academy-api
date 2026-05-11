@@ -67,6 +67,36 @@ Swagger docs are available outside production at:
 http://localhost:3000/api/v1/docs
 ```
 
+### Start with Docker
+
+The Docker setup starts PostgreSQL, applies Prisma migrations, and then starts
+the production NestJS API:
+
+```bash
+docker compose up --build
+```
+
+Docker-specific defaults live in `.env.docker`. The API is exposed at:
+
+```text
+GET http://localhost:3000/api/v1
+```
+
+Swagger is enabled for local Docker by `SWAGGER_ENABLED=true`:
+
+```text
+http://localhost:3000/api/v1/docs
+```
+
+PostgreSQL is available from the host at `localhost:5433` by default, while
+containers use the internal `db:5432` address.
+
+To reset the local Docker database, remove the Compose volume:
+
+```bash
+docker compose down -v
+```
+
 ## Core Modules
 
 - `auth`: register organization, login, refresh, logout, active tenant context

@@ -2,12 +2,14 @@ services:
   db:
     image: postgres:17
     restart: always
+    env_file:
+      - .env.docker
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-agoge}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-agogedb}
+      POSTGRES_USER: ${POSTGRES_USER:-mragoge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-supersecure}
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5433}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,20 +18,38 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: ['yarn', 'prisma:migrate:deploy']
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mragoge}:${POSTGRES_PASSWORD:-supersecure}@db:5432/${POSTGRES_DB:-agogedb}?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ['node', 'dist/src/main.js']
     ports:
-      - '3000:3000'
+      - '${API_PORT:-3000}:3000'
+    env_file:
+      - .env.docker
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/agoge?schema=public}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mragoge}:${POSTGRES_PASSWORD:-supersecure}@db:5432/${POSTGRES_DB:-agogedb}?schema=public
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
