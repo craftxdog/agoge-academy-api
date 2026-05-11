@@ -1,12 +1,15 @@
 # Demo Database Seed
 
-This project now includes an idempotent demo seed at `prisma/seed.ts` to populate a full tenant with realistic SaaS data after `prisma db push`.
+This project includes a reset-style demo seed at `prisma/seed.ts` to populate one complete tenant with realistic SaaS data after `prisma db push`.
+
+The seed clears runtime/demo data before recreating the workspace, so the database ends with one fully configured demo organization and a fresh system endpoint-permission matrix.
 
 ## What it creates
 
 - One fully configured organization: `agoge-performance-club`
 - Branding and organization settings
 - Full system catalog for modules, permissions and screens when the database was created with `db push`
+- Full endpoint permission rules for protected API routes
 - Canonical system roles synchronized on every seed run:
   - `admin` with all tenant-wide permissions
   - `customer` with self-service-only permissions
@@ -49,6 +52,8 @@ Customer accounts:
 2. Run `yarn prisma:db:push`
 3. Run `yarn prisma:seed`
 
+Do not run this seed against an environment that contains data you need to keep.
+
 ## Why the seed also creates system catalog data
 
 `prisma db push` synchronizes schema objects, but it does not execute the SQL data inserts that live in the migration files. Because this API depends on global records such as app modules, permissions and screens, the seed recreates those reference records when needed so a fresh environment is fully usable without hidden manual steps.
@@ -56,6 +61,7 @@ Customer accounts:
 The seed also repairs tenant drift for the demo workspace by re-syncing:
 
 - app catalog modules, permissions and screens
+- endpoint permission rules
 - organization module enablement records
 - system screen metadata and visibility
 - protected system roles (`admin`, `customer`)

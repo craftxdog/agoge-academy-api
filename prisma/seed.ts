@@ -37,6 +37,7 @@ const DEMO_ORGANIZATION_NAME = 'Agoge Performance Club';
 const DEMO_TIMEZONE = 'America/Managua';
 const DEMO_LOCALE = 'es-NI';
 const DEMO_CURRENCY = 'USD';
+const SEED_TRANSACTION_TIMEOUT_MS = 30_000;
 
 type DemoUserSeed = {
   email: string;
@@ -298,6 +299,39 @@ function dateOnly(value: Date): Date {
   return date;
 }
 
+async function resetDemoDatabase() {
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.paymentTransaction.deleteMany();
+      await tx.payment.deleteMany();
+      await tx.notification.deleteMany();
+      await tx.auditLog.deleteMany();
+      await tx.memberSchedule.deleteMany();
+      await tx.businessHour.deleteMany();
+      await tx.scheduleException.deleteMany();
+      await tx.invitation.deleteMany();
+      await tx.memberRole.deleteMany();
+      await tx.rolePermission.deleteMany();
+      await tx.role.deleteMany();
+      await tx.organizationScreen.deleteMany();
+      await tx.organizationModule.deleteMany();
+      await tx.organizationSetting.deleteMany();
+      await tx.organizationBranding.deleteMany();
+      await tx.location.deleteMany();
+      await tx.paymentType.deleteMany();
+      await tx.paymentMethod.deleteMany();
+      await tx.organizationMember.deleteMany();
+      await tx.organization.deleteMany();
+      await tx.user.deleteMany();
+      await tx.$executeRaw`DELETE FROM "endpoint_permission_rules"`;
+      await tx.appScreen.deleteMany();
+      await tx.permission.deleteMany();
+      await tx.appModule.deleteMany();
+    },
+    { timeout: SEED_TRANSACTION_TIMEOUT_MS },
+  );
+}
+
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
   const derivedKey = (await scryptAsync(password, salt, KEY_LENGTH)) as Buffer;
@@ -306,9 +340,12 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function ensureSystemCatalog() {
-  await prisma.$transaction(async (tx) => {
-    await ensureSystemAccessCatalog(tx);
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await ensureSystemAccessCatalog(tx);
+    },
+    { timeout: SEED_TRANSACTION_TIMEOUT_MS },
+  );
 
   const [modules, permissions] = await Promise.all([
     prisma.appModule.findMany({
@@ -326,17 +363,7 @@ async function ensureSystemCatalog() {
 }
 
 async function recreateDemoOrganization() {
-  const existingOrganization = await prisma.organization.findUnique({
-    where: { slug: DEMO_ORGANIZATION_SLUG },
-    select: { id: true },
-  });
-
-  if (existingOrganization) {
-    await prisma.organization.delete({
-      where: { id: existingOrganization.id },
-    });
-  }
-
+  await resetDemoDatabase();
   const systemCatalog = await ensureSystemCatalog();
 
   const organization = await prisma.organization.create({
@@ -410,12 +437,15 @@ async function recreateDemoOrganization() {
     ],
   });
 
-  await prisma.$transaction(async (tx) => {
-    await syncOrganizationAccessModel(tx, organization.id, {
-      forceVisibleSystemScreens: true,
-    });
-    await ensureSystemRoles(tx, organization.id);
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await syncOrganizationAccessModel(tx, organization.id, {
+        forceVisibleSystemScreens: true,
+      });
+      await ensureSystemRoles(tx, organization.id);
+    },
+    { timeout: SEED_TRANSACTION_TIMEOUT_MS },
+  );
 
   const locations = await createLocations(organization.id);
   await createBusinessHours(organization.id, locations);
